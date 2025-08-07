@@ -1,8 +1,21 @@
+'use client';
+
 import Image from "next/image";
-import { Building2, Award, Target, Users, Leaf, Shield } from "lucide-react";
+import { Building2, Award, Target, Users, Leaf, Shield, X } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import { useState } from "react";
 
 export default function QuemSomos() {
+  const [selectedImage, setSelectedImage] = useState<{src: string, alt: string} | null>(null);
+  
+  const openImageModal = (src: string, alt: string) => {
+    setSelectedImage({ src, alt });
+  };
+  
+  const closeImageModal = () => {
+    setSelectedImage(null);
+  };
+
   return (
     <div className="min-h-screen bg-stone-50">
       <PageHeader 
@@ -14,12 +27,12 @@ export default function QuemSomos() {
       />
 
       {/* About Company */}
-      <section className="py-16 bg-white">
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold text-stone-900 mb-6">A TECHSUS</h2>
-              <p className="text-lg text-stone-700 mb-6">
+              <p className="text-lg text-stone-700 mb-4">
                 A TECHSUS é um grupo de empresas voltadas à gestão e implantação de um sistema inovador para a construção industrializada de painéis estruturais bioclimáticos de concreto com patentes requeridas e concedidas no Brasil, China e EUA.
               </p>
               <p className="text-lg text-stone-700">
@@ -28,10 +41,10 @@ export default function QuemSomos() {
             </div>
             <div>
               <Image 
-                src="/images/slide_2_imagem_1.png" 
-                alt="Processo construtivo TECHSUS" 
+                src="/images/imagenscomdescricao/colagem-de-fotos-vintage-do-processo-de-montagem.png" 
+                alt="Processo construtivo histórico da TECHSUS" 
                 width={600} 
-                height={400} 
+                height={450} 
                 className="rounded-lg shadow-lg"
               />
             </div>
@@ -39,56 +52,38 @@ export default function QuemSomos() {
         </div>
       </section>
 
-      {/* Founder and Team */}
-      <section className="py-16 bg-stone-100">
+      {/* Founder Section */}
+      <section className="py-20 bg-stone-100">
         <div className="container mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Nosso Fundador e Equipe</h2>
+            <h2 className="text-3xl font-bold text-stone-900 mb-4">Nosso Fundador</h2>
             <div className="w-20 h-1 bg-orange-600 mx-auto"></div>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-4">Fundador</h3>
-              <p className="text-stone-700 mb-4">Com mais de 40 anos de experiência:</p>
+          <div className="grid md:grid-cols-3 gap-8 items-center">
+            <div className="md:col-span-1">
+              <Image 
+                src="/images/imagenscomdescricao/retrato-de-homem-com-cabelo-e-barba-grisalhos.png" 
+                alt="Retrato do fundador Michel Fouad Zeenni" 
+                width={400} 
+                height={400} 
+                className="rounded-full shadow-lg mx-auto"
+              />
+            </div>
+            <div className="md:col-span-2 bg-white rounded-lg p-8 shadow-lg">
+              <h3 className="text-2xl font-bold text-orange-600 mb-4">Michel Fouad Zeenni</h3>
+              <p className="text-stone-700 mb-4 text-lg">Com mais de 40 anos de experiência, o fundador da TECHSUS tem uma trajetória marcada pela inovação:</p>
               <ul className="space-y-3 text-stone-700">
                 <li className="flex items-start">
                   <Award className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Atuou como projetista estrutural e empreendedor na construção civil
+                  Atuou como projetista estrutural e empreendedor na construção civil.
                 </li>
                 <li className="flex items-start">
                   <Building2 className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Responsável pela construção do Shopping Frei Caneca no ano de 2000 onde iniciou a industrialização da construção
+                  Foi responsável pela construção do Shopping Frei Caneca, onde iniciou a industrialização da construção.
                 </li>
                 <li className="flex items-start">
                   <Target className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Montou a primeira fábrica estacionária de pré-fabricados em 2009, dando início à industrialização da construção habitacional com patentes concedidas, Datec, Caixa Econômica Federal e homologação no CDHU
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-4">Equipe Multidisciplinar</h3>
-              <p className="text-stone-700 mb-4">Profissionais altamente qualificados:</p>
-              <ul className="space-y-3 text-stone-700">
-                <li className="flex items-start">
-                  <Users className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Gestores com experiência nas operações industriais
-                </li>
-                <li className="flex items-start">
-                  <Building2 className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Engenheiros estruturais e de produção
-                </li>
-                <li className="flex items-start">
-                  <Target className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Arquitetos especializados em projetos industrializados
-                </li>
-                <li className="flex items-start">
-                  <Shield className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Técnicos em construção civil e montagem
-                </li>
-                <li className="flex items-start">
-                  <Leaf className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Especialistas em sustentabilidade e eficiência energética
+                  Montou a primeira fábrica estacionária de pré-fabricados em 2009, dando início à industrialização da construção habitacional.
                 </li>
               </ul>
             </div>
@@ -97,70 +92,122 @@ export default function QuemSomos() {
       </section>
 
       {/* Trajectory and Milestones */}
-      <section className="py-16 bg-white">
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Trajetória e Marcos Alcançados</h2>
-            <div className="w-20 h-1 bg-orange-600 mx-auto"></div>
+            <h2 className="text-3xl font-bold text-stone-900 mb-4">Trajetória e Validação</h2>
+            <p className="text-lg text-stone-700 max-w-3xl mx-auto">
+              Nossa tecnologia é fruto de anos de desenvolvimento e possui validação dos mais respeitados órgãos técnicos.
+            </p>
+            <div className="w-20 h-1 bg-orange-600 mx-auto mt-4"></div>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-stone-50 rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-6">Desenvolvimento e Validação da Tecnologia</h3>
-              <ul className="space-y-3 text-stone-700 mb-6">
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Obtenção de patentes no Brasil, China e EUA
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Certificações técnicas e homologações (IPT, CDHU, CEF)
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Desenvolvimento de sistema construtivo inovador
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Criação de processos industrializados de produção
-                </li>
-              </ul>
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Patents Section */}
+            <div className="bg-stone-50 rounded-lg p-6 shadow-lg">
+              <h3 className="text-xl font-bold text-orange-600 mb-4">Patentes e Propriedade Intelectual</h3>
+              <p className="text-stone-700 mb-6 text-sm">
+                O sistema TECHSUS é protegido por patentes no Brasil e nos Estados Unidos, garantindo nossa posição de vanguarda no mercado.
+              </p>
+              <div className="space-y-4">
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <Image 
+                    src="/images/imagenscomdescricao/documento-patente-brasil-inpi.png" 
+                    alt="Documento de Patente Brasil - INPI" 
+                    width={180} 
+                    height={220} 
+                    className="rounded-lg mb-2 mx-auto object-cover border cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => openImageModal("/images/imagenscomdescricao/documento-patente-brasil-inpi.png", "Documento de Patente Brasil - INPI")}
+                  />
+                  <h4 className="text-sm font-bold text-stone-900 mb-1">Patente Brasil</h4>
+                  <p className="text-xs text-stone-600">Instituto Nacional da Propriedade Industrial (INPI)</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <Image 
+                    src="/images/imagenscomdescricao/documento-patente-estados-unidos.png" 
+                    alt="Documento de Patente Estados Unidos - USPTO" 
+                    width={180} 
+                    height={220} 
+                    className="rounded-lg mb-2 mx-auto object-cover border cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => openImageModal("/images/imagenscomdescricao/documento-patente-estados-unidos.png", "Documento de Patente Estados Unidos - USPTO")}
+                  />
+                  <h4 className="text-sm font-bold text-stone-900 mb-1">Patente Estados Unidos</h4>
+                  <p className="text-xs text-stone-600">United States Patent and Trademark Office (USPTO)</p>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-stone-50 rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-6">Protótipos e Projetos-Piloto</h3>
-              <ul className="space-y-3 text-stone-700 mb-6">
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Construção de unidades demonstrativas
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Validação do processo produtivo e montagem
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Projetos realizados em Rio Claro-SP, Várzea Paulista-SP e Duque de Caxias-RJ
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Casa Protótipo em São Simão-SP (Fev/2025)
-                </li>
-                <li className="pl-4 border-l-2 border-orange-200 py-2">
-                  Em processo de homologação na CDHU para casa unifamiliar e edifício de 4 pisos
-                </li>
-              </ul>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="text-center">
+            {/* IPT Reports Section */}
+            <div className="bg-stone-50 rounded-lg p-6 shadow-lg">
+              <h3 className="text-xl font-bold text-orange-600 mb-4">Relatórios Técnicos IPT</h3>
+              <p className="text-stone-700 mb-6 text-sm">
+                Validação completa do Instituto de Pesquisas Tecnológicas com ensaios de desempenho, térmica, acústica e durabilidade.
+              </p>
+              <div className="space-y-4">
+                <div className="text-center bg-white p-3 rounded-lg border">
                   <Image 
-                    src="/images/slide_29_imagem_1.png" 
-                    alt="Protótipo São Simão" 
-                    width={200} 
-                    height={150} 
-                    className="rounded-lg mb-2"
+                    src="/images/imagenscomdescricao/relatorio-tecnico-ipt-avaliacao-de-desempenho-do-sistema.png" 
+                    alt="Relatório IPT #107 938-205 - Desempenho do Sistema" 
+                    width={160} 
+                    height={200} 
+                    className="rounded-lg mb-2 object-cover border cursor-pointer hover:opacity-80 transition-opacity mx-auto"
+                    onClick={() => openImageModal("/images/imagenscomdescricao/relatorio-tecnico-ipt-avaliacao-de-desempenho-do-sistema.png", "Relatório IPT #107 938-205 - Desempenho do Sistema")}
                   />
-                  <p className="text-sm text-stone-600">Protótipo São Simão (2025)</p>
+                  <p className="text-sm font-semibold text-stone-900 mb-1">IPT #107 938-205</p>
+                  <p className="text-xs text-stone-600">Desempenho do Sistema</p>
                 </div>
-                <div className="text-center">
+                <div className="text-center bg-white p-3 rounded-lg border">
                   <Image 
-                    src="/images/slide_31_imagem_1.png" 
-                    alt="Prédio Rio Claro" 
-                    width={200} 
-                    height={150} 
-                    className="rounded-lg mb-2"
+                    src="/images/imagenscomdescricao/relatorio-tecnico-ipt-avaliacao-termica-apartamentos.png" 
+                    alt="Relatórios IPT #107 880-205 & #107 881-205 - Conforto Térmico" 
+                    width={160} 
+                    height={200} 
+                    className="rounded-lg mb-2 object-cover border cursor-pointer hover:opacity-80 transition-opacity mx-auto"
+                    onClick={() => openImageModal("/images/imagenscomdescricao/relatorio-tecnico-ipt-avaliacao-termica-apartamentos.png", "Relatórios IPT #107 880-205 & #107 881-205 - Conforto Térmico")}
                   />
-                  <p className="text-sm text-stone-600">Prédio T+3 Rio Claro</p>
+                  <p className="text-sm font-semibold text-stone-900 mb-1">IPT #107 880-205 & #107 881-205</p>
+                  <p className="text-xs text-stone-600">Conforto Térmico</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border">
+                  <p className="text-sm font-semibold text-stone-900 mb-1">IPT #980 629-203</p>
+                  <p className="text-xs text-stone-600">Desempenho Acústico</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border">
+                  <p className="text-sm font-semibold text-stone-900 mb-1">IPT #982 659-203</p>
+                  <p className="text-xs text-stone-600">Durabilidade</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Certifications Section */}
+            <div className="bg-stone-50 rounded-lg p-6 shadow-lg">
+              <h3 className="text-xl font-bold text-orange-600 mb-4">Certificações e Homologações Oficiais</h3>
+              <p className="text-stone-700 mb-6 text-sm">
+                Homologações dos principais órgãos técnicos e governamentais, garantindo conformidade com as normas brasileiras.
+              </p>
+              <div className="space-y-4">
+                <div className="text-center bg-white p-3 rounded-lg border">
+                  <Image 
+                    src="/images/imagenscomdescricao/documento-de-avaliacao-tecnica-ipt-datec.png" 
+                    alt="Certificado DATEC - Documento de Avaliação Técnica" 
+                    width={200} 
+                    height={140} 
+                    className="rounded-lg mb-2 object-contain border cursor-pointer hover:opacity-80 transition-opacity mx-auto"
+                    onClick={() => openImageModal("/images/imagenscomdescricao/documento-de-avaliacao-tecnica-ipt-datec.png", "Certificado DATEC - Documento de Avaliação Técnica")}
+                  />
+                  <p className="text-sm font-semibold text-stone-900 mb-1">Certificado DATEC</p>
+                  <p className="text-xs text-stone-600">Documento de Avaliação Técnica</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border">
+                  <p className="text-sm font-semibold text-stone-900 mb-1">Caixa Econômica Federal</p>
+                  <p className="text-xs text-stone-600">Homologação Oficial</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border">
+                  <p className="text-sm font-semibold text-stone-900 mb-1">CDHU</p>
+                  <p className="text-xs text-stone-600">Companhia de Desenvolvimento Habitacional</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border">
+                  <p className="text-sm font-semibold text-stone-900 mb-1">SINAT</p>
+                  <p className="text-xs text-stone-600">Sistema Nacional de Aprovações Técnicas</p>
                 </div>
               </div>
             </div>
@@ -168,57 +215,33 @@ export default function QuemSomos() {
         </div>
       </section>
 
-      {/* Values and Philosophy */}
-      <section className="py-16 bg-stone-100">
-        <div className="container mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Nossos Valores e Filosofia</h2>
-            <div className="w-20 h-1 bg-orange-600 mx-auto"></div>
-          </div>
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-lg shadow-xl border border-stone-200">
-              <div className="bg-stone-900 text-white p-8 rounded-t-lg">
-                <div className="text-center">
-                  <h3 className="text-3xl font-bold mb-4">Compromisso com a Excelência</h3>
-                  <p className="text-lg text-stone-200 max-w-4xl mx-auto leading-relaxed">
-                    A TECHSUS fundamenta suas atividades em pilares sólidos de inovação, qualidade e responsabilidade social, 
-                    sempre buscando a excelência técnica e o desenvolvimento sustentável.
-                  </p>
-                </div>
-              </div>
-              <div className="p-8">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="border-l-4 border-orange-600 pl-6 hover:bg-stone-50 transition-colors duration-200 py-4">
-                    <h4 className="text-xl font-bold text-stone-900 mb-3 uppercase tracking-wide">Inovação Constante</h4>
-                    <p className="text-stone-700 leading-relaxed">Desenvolvimento contínuo de tecnologias e processos industriais, mantendo-se na vanguarda da construção sustentável.</p>
-                  </div>
-                  <div className="border-l-4 border-orange-600 pl-6 hover:bg-stone-50 transition-colors duration-200 py-4">
-                    <h4 className="text-xl font-bold text-stone-900 mb-3 uppercase tracking-wide">Qualidade Técnica</h4>
-                    <p className="text-stone-700 leading-relaxed">Rigor nos padrões de construção e certificações, garantindo excelência em todos os projetos executados.</p>
-                  </div>
-                  <div className="border-l-4 border-orange-600 pl-6 hover:bg-stone-50 transition-colors duration-200 py-4">
-                    <h4 className="text-xl font-bold text-stone-900 mb-3 uppercase tracking-wide">Responsabilidade Social</h4>
-                    <p className="text-stone-700 leading-relaxed">Contribuição ativa para o desenvolvimento urbano sustentável e responsabilidade socioambiental.</p>
-                  </div>
-                  <div className="border-l-4 border-orange-600 pl-6 hover:bg-stone-50 transition-colors duration-200 py-4">
-                    <h4 className="text-xl font-bold text-stone-900 mb-3 uppercase tracking-wide">Parcerias Estratégicas</h4>
-                    <p className="text-stone-700 leading-relaxed">Colaboração especializada com instituições de pesquisa, governos e parceiros do setor industrial.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-stone-100 px-8 py-6 rounded-b-lg border-t border-stone-200">
-                <div className="text-center">
-                  <p className="text-stone-600 font-medium">
-                    <span className="text-orange-600 font-bold">25+ anos</span> de experiência em construção industrializada • 
-                    <span className="text-orange-600 font-bold">Patentes</span> no Brasil, China e EUA • 
-                    <span className="text-orange-600 font-bold">Certificações</span> IPT, CDHU, CEF
-                  </p>
-                </div>
-              </div>
+      {/* Image Zoom Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <button
+              onClick={closeImageModal}
+              className="absolute -top-12 right-0 text-white hover:text-orange-400 transition-colors z-10"
+              aria-label="Fechar modal"
+            >
+              <X size={32} />
+            </button>
+            <div className="bg-white rounded-lg p-2 shadow-2xl">
+              <Image
+                src={selectedImage.src}
+                alt={selectedImage.alt}
+                width={800}
+                height={1000}
+                className="w-full h-auto max-h-[80vh] object-contain rounded"
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
           </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }
