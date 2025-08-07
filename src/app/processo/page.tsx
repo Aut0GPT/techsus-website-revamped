@@ -1,28 +1,39 @@
 
 import PageHeader from "@/components/PageHeader";
 import Image from "next/image";
-import { Factory, Truck, HardHat, CheckCircle } from "lucide-react";
+import { Factory, Truck, HardHat, CheckCircle, ClipboardList } from "lucide-react";
 
 const processSteps = [
+    {
+    icon: <ClipboardList className="h-12 w-12 text-orange-600" />,
+    title: "1. Compatibilização e o desenvolvimento de projetos industriais",
+    description: "Tudo começa com um planejamento detalhado. Nossa equipe de engenharia utiliza softwares avançados para modelar o projeto, otimizar o layout dos painéis e planejar cada etapa da produção e montagem, garantindo precisão e eficiência.",
+    mediaType: "image",
+    mediaSrc: "/images/imagenscomdescricao/planta-baixa-de-implantacao-de-complexo-residencial.png",
+    alt: "Planta baixa do planejamento de um complexo residencial"
+  },
   {
     icon: <Factory className="h-12 w-12 text-orange-600" />,
-    title: "1. Fabricação Industrial (Off-site)",
-    description: "O processo começa em nossa fábrica, onde os painéis de concreto são produzidos em um ambiente controlado. Utilizando moldes de alta precisão e maquinário automatizado, garantimos a perfeição dimensional, a qualidade do concreto e a integração de todos os componentes, como dutos e vãos.",
-    image: "/images/imagenscomdescricao/vista-ampla-chao-fabrica-paineis.png",
-    alt: "Fábrica de painéis de concreto TECHSUS"
+    title: "2. Fabricação Industrial (Off-site)",
+    description: "O processo continua em nossa fábrica, onde os painéis de concreto são produzidos em um ambiente controlado. Utilizando moldes de alta precisão e maquinário automatizado, garantimos a perfeição dimensional, a qualidade do concreto e a integração de todos os componentes, como dutos e vãos.",
+    mediaType: "video",
+    mediaSrc: "/images/imagenscomdescricao/FabricaAustriaSistemaCarrosselVideomostrandosistemacarrossel.mp4",
+    alt: "Vídeo do sistema carrossel na fábrica da Áustria"
   },
   {
     icon: <Truck className="h-12 w-12 text-orange-600" />,
-    title: "2. Logística e Transporte",
+    title: "3. Logística e Transporte",
     description: "Após a cura e um rigoroso controle de qualidade, os painéis são cuidadosamente carregados em veículos especiais. A logística é planejada para otimizar o tempo de transporte e garantir que os painéis cheguem ao canteiro de obras em perfeitas condições e na ordem correta para a montagem.",
-    image: "/images/imagenscomdescricao/transporte-de-painel-concreto-em-caminhao-especial.png",
+    mediaType: "image",
+    mediaSrc: "/images/imagenscomdescricao/transporte-de-painel-concreto-em-caminhao-especial.png",
     alt: "Transporte de painel de concreto em caminhão"
   },
   {
     icon: <HardHat className="h-12 w-12 text-orange-600" />,
-    title: "3. Montagem Rápida (On-site)",
+    title: "4. Montagem Rápida (On-site)",
     description: "No canteiro de obras, a magia acontece. Com o auxílio de um guindaste, os painéis são rapidamente içados e posicionados. Nossa equipe especializada realiza a montagem, conectando os painéis para formar a estrutura da edificação em uma fração do tempo de uma construção convencional.",
-    image: "/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png",
+    mediaType: "image",
+    mediaSrc: "/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png",
     alt: "Montagem de painéis de concreto no canteiro de obras"
   }
 ];
@@ -40,7 +51,7 @@ export default function Processo() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Do Projeto à Realidade: Eficiência em 3 Etapas</h2>
+            <h2 className="text-3xl font-bold text-stone-900 mb-4">Do Projeto à Realidade: Eficiência em 4 Etapas</h2>
             <p className="text-lg text-stone-700 max-w-3xl mx-auto">
               O sistema TECHSUS revoluciona a construção civil através de um processo otimizado que garante velocidade, qualidade e sustentabilidade.
             </p>
@@ -57,13 +68,26 @@ export default function Processo() {
                   <p className="text-lg text-stone-700 leading-relaxed">{step.description}</p>
                 </div>
                 <div className={`lg:order-${index % 2 === 0 ? '2' : '1'}`}>
-                  <Image 
-                    src={step.image}
-                    alt={step.alt}
-                    width={600}
-                    height={400}
-                    className="rounded-lg shadow-2xl"
-                  />
+                  {step.mediaType === 'video' ? (
+                    <video
+                      src={step.mediaSrc}
+                      width={600}
+                      height={400}
+                      className="rounded-lg shadow-2xl"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <Image 
+                      src={step.mediaSrc}
+                      alt={step.alt}
+                      width={600}
+                      height={400}
+                      className="rounded-lg shadow-2xl"
+                    />
+                  )}
                 </div>
               </div>
             ))}

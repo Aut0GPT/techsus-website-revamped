@@ -1,6 +1,6 @@
 import PageHeader from "@/components/PageHeader";
 import Image from "next/image";
-import { Briefcase, Home, School, TrendingUp } from "lucide-react";
+import { Briefcase, Home, School, Hotel } from "lucide-react";
 
 const marketSegments = [
   {
@@ -17,6 +17,11 @@ const marketSegments = [
     icon: <School className="h-10 w-10 text-orange-600" />,
     title: "Institucional",
     description: "Construção de escolas, hospitais, creches e outros equipamentos públicos, garantindo agilidade para a administração pública."
+  },
+  {
+    icon: <Hotel className="h-10 w-10 text-orange-600" />,
+    title: "Hoteleiro",
+    description: "Desenvolvimento de hotéis e resorts com construção ágil e padronizada, ideal para expansões de redes hoteleiras."
   }
 ];
 
@@ -44,7 +49,7 @@ export default function Mercado() {
             </div>
             <div>
               <Image 
-                src="/images/imagenscomdescricao/infografico-desafios-industria-construcao-civil.png"
+                src="/images/imagenscomdescricao/infografico-desafios-industria-construcao-civil - Editada.jpg"
                 alt="Infográfico sobre os desafios da construção civil"
                 width={600}
                 height={450}
@@ -63,7 +68,7 @@ export default function Mercado() {
               Nossa tecnologia é versátil e pode ser aplicada em uma ampla gama de projetos, atendendo a diversas demandas do mercado.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {marketSegments.map((segment, index) => (
               <div key={index} className="bg-white p-8 rounded-lg shadow-lg text-center hover:scale-105 transition-transform">
                 <div className="flex justify-center mb-4">
@@ -171,7 +176,7 @@ export default function Mercado() {
 
           {/* Housing Programs Dashboard */}
           <div className="bg-stone-100 rounded-lg p-8 mb-16">
-            <h3 className="text-2xl font-bold text-stone-900 mb-6">Programas Habitacionais em Andamento</h3>
+            <h3 className="text-2xl font-bold text-stone-900 mb-6 text-center">Programas Habitacionais em Andamento</h3>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-lg">
                 <h4 className="text-lg font-bold text-stone-900 mb-4">CDHU - Metas 2025</h4>
@@ -194,18 +199,34 @@ export default function Mercado() {
                   </li>
                 </ul>
               </div>
-              <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-lg">
-                <h4 className="text-lg font-bold text-stone-900 mb-6">Parceria CAIXA + Gov. SP</h4>
-                <div className="space-y-6">
+              <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-lg flex flex-col h-full">
+                <h4 className="text-lg font-bold text-stone-900 mb-4 text-center">Parceria CAIXA + Gov. SP</h4>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <Image
+                    src="/images/imagenscomdescricao/CaixaLogo.png"
+                    alt="Logo da Caixa Econômica Federal"
+                    width={200}
+                    height={100}
+                    className="object-contain w-full h-20"
+                  />
+                  <Image
+                    src="/images/imagenscomdescricao/GovernoSPTarcisiomostrandodocumento.png"
+                    alt="Governador de São Paulo, Tarcísio de Freitas"
+                    width={200}
+                    height={100}
+                    className="object-cover w-full h-20 rounded-md"
+                  />
+                </div>
+                <div className="space-y-4 mt-auto">
                   <div>
-                    <div className="text-2xl font-bold text-stone-900 mb-2">R$ 1 bilhão</div>
+                    <div className="text-2xl font-bold text-stone-900 mb-1">R$ 1 bilhão</div>
                     <div className="text-sm text-stone-600">Investimento Total</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-stone-900 mb-2">~20 mil unidades</div>
+                    <div className="text-2xl font-bold text-stone-900 mb-1">~20 mil unidades</div>
                     <div className="text-sm text-stone-600">Unidades Habitacionais</div>
                   </div>
-                  <div className="text-xs text-stone-500 pt-4 border-t border-stone-200">
+                  <div className="text-xs text-stone-500 pt-3 border-t border-stone-200 mt-3">
                     Publicado em 08/04/2025
                   </div>
                 </div>

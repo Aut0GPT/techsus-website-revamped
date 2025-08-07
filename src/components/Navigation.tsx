@@ -26,7 +26,7 @@ export default function Navigation() {
       <div className="container mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <Link href="/" className="flex items-center">
-            <Image src="/logo-techsus.png" alt="TECHSUS Logo" width={150} height={45} />
+            <Image src="/images/imagenscomdescricao/logo-techsus.png" alt="TECHSUS Logo" width={150} height={45} />
           </Link>
           <nav className="hidden lg:flex items-center space-x-6">
             {navigationLinks.map((link) => (

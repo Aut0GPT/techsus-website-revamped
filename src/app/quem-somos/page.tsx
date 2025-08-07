@@ -62,15 +62,15 @@ export default function QuemSomos() {
           <div className="grid md:grid-cols-3 gap-8 items-center">
             <div className="md:col-span-1">
               <Image 
-                src="/images/imagenscomdescricao/retrato-de-homem-com-cabelo-e-barba-grisalhos.png" 
-                alt="Retrato do fundador Michel Fouad Zeenni" 
+                src="/images/imagenscomdescricao/Michel Zeenni.png" 
+                alt="Retrato do fundador Michel Zenni" 
                 width={400} 
                 height={400} 
                 className="rounded-full shadow-lg mx-auto"
               />
             </div>
             <div className="md:col-span-2 bg-white rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-4">Michel Fouad Zeenni</h3>
+              <h3 className="text-2xl font-bold text-orange-600 mb-4">Michel Zenni</h3>
               <p className="text-stone-700 mb-4 text-lg">Com mais de 40 anos de experiência, o fundador da TECHSUS tem uma trajetória marcada pela inovação:</p>
               <ul className="space-y-3 text-stone-700">
                 <li className="flex items-start">
@@ -132,6 +132,18 @@ export default function QuemSomos() {
                   />
                   <h4 className="text-sm font-bold text-stone-900 mb-1">Patente Estados Unidos</h4>
                   <p className="text-xs text-stone-600">United States Patent and Trademark Office (USPTO)</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <Image 
+                    src="/images/imagenscomdescricao/Certificado de Patente - CHINA nº 2017800928093.jpg"
+                    alt="Documento de Patente China"
+                    width={180} 
+                    height={220} 
+                    className="rounded-lg mb-2 mx-auto object-cover border cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => openImageModal("/images/imagenscomdescricao/Certificado de Patente - CHINA nº 2017800928093.jpg", "Documento de Patente China")}
+                  />
+                  <h4 className="text-sm font-bold text-stone-900 mb-1">Patente China</h4>
+                  <p className="text-xs text-stone-600">Escritório Estatal de Propriedade Intelectual da China (SIPO)</p>
                 </div>
               </div>
             </div>
