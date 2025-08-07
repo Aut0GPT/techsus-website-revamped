@@ -132,7 +132,7 @@ export default function Home() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-bold text-stone-900">Casa Protótipo - São Simão/SP</h3>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">ENTREGUE</span>
+                  
                 </div>
                 <p className="text-stone-700 mb-4">
                   Projeto-piloto entregue em Fevereiro de 2025 demonstrando nossa capacidade de execução com qualidade superior e prazos acelerados.
@@ -158,7 +158,7 @@ export default function Home() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-bold text-stone-900">Edifício T+3 - Rio Claro/SP</h3>
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">VERTICAL</span>
+                  
                 </div>
                 <p className="text-stone-700 mb-4">
                   Primeiro projeto vertical demonstrando a aplicação da tecnologia em construções de múltiplos pavimentos com eficiência estrutural.
