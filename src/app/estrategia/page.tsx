@@ -93,22 +93,22 @@ export default function Estrategia() {
         <div className="container mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="lg:order-2">
-              <h2 className="text-3xl font-bold text-stone-900 mb-6">Projeções de Crescimento</h2>
+              <h2 className="text-3xl font-bold text-stone-900 mb-6">Tecnologia e Expansão Estratégica</h2>
                <p className="text-lg text-stone-700 mb-4 leading-relaxed">
-                O crescimento contínuo da população e a necessidade de infraestrutura em setores chave como hotelaria, hospitais e escolas, representam uma demanda crescente que nosso sistema está pronto para atender.
+                Combinamos equipamentos industriais de última geração com uma estratégia de expansão geográfica inteligente. Nosso parque tecnológico avançado e rede de fábricas estrategicamente posicionadas nos permitem atender à crescente demanda por infraestrutura de qualidade.
               </p>
             </div>
             <div className="lg:order-1 grid grid-cols-3 gap-4 items-center">
               <Image 
-                src="/images/imagenscomdescricao/diagrama-de-rede-de-fabricas.png"
-                alt="Diagrama da rede de fábricas e crescimento"
+                src="/images/imagenscomdescricao/equipamento-industrial-azul-da-ebawe-progress-group.png"
+                alt="Equipamento industrial avançado - Tecnologia EBAWE Progress Group"
                 width={300}
                 height={225}
                 className="rounded-lg shadow-lg border col-span-1"
               />
               <Image 
-                src="/images/imagenscomdescricao/mapa-de-localizacao-de-fabricas-em-sao-paulo.png"
-                alt="Mapa de localização de fabricas em São Paulo"
+                src="/images/imagenscomdescricao/Fabricas Localizacao.PNG"
+                alt="Mapa de localização de fábricas - Estratégia de expansão"
                 width={500}
                 height={375}
                 className="rounded-lg shadow-lg border col-span-2"

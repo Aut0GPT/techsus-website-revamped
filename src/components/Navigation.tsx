@@ -22,7 +22,7 @@ export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
+    <header className="bg-black shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <Link href="/" className="flex items-center">
@@ -30,23 +30,23 @@ export default function Navigation() {
           </Link>
           <nav className="hidden lg:flex items-center space-x-6">
             {navigationLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="text-stone-700 hover:text-orange-600 transition-colors">
+              <Link key={link.href} href={link.href} className="text-white hover:text-orange-400 transition-colors font-medium">
                 {link.label}
               </Link>
             ))}
           </nav>
           <div className="lg:hidden">
-            <button onClick={() => setIsOpen(!isOpen)} className="text-stone-700 hover:text-orange-600">
+            <button onClick={() => setIsOpen(!isOpen)} className="text-white hover:text-orange-400">
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
       {isOpen && (
-        <div className="lg:hidden bg-white py-4">
+        <div className="lg:hidden bg-black py-4 border-t border-stone-800">
           <nav className="flex flex-col items-center space-y-4">
             {navigationLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="text-stone-700 hover:text-orange-600 transition-colors" onClick={() => setIsOpen(false)}>
+              <Link key={link.href} href={link.href} className="text-white hover:text-orange-400 transition-colors font-medium" onClick={() => setIsOpen(false)}>
                 {link.label}
               </Link>
             ))}

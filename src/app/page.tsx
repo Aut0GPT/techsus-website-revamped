@@ -1,8 +1,20 @@
+'use client';
+
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, Building2, Factory, Leaf, Award, ShieldCheck } from "lucide-react";
+import { ChevronRight, Building2, Factory, Leaf, Award, ShieldCheck, X } from "lucide-react";
+import { useState } from "react";
 
 export default function Home() {
+  const [selectedImage, setSelectedImage] = useState<{src: string, alt: string} | null>(null);
+  
+  const openImageModal = (src: string, alt: string) => {
+    setSelectedImage({ src, alt });
+  };
+  
+  const closeImageModal = () => {
+    setSelectedImage(null);
+  };
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Hero Section */}
@@ -280,8 +292,22 @@ export default function Home() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Image src="/images/imagenscomdescricao/documento-patente-brasil-inpi.png" alt="Patente do Brasil" width={300} height={400} className="rounded-lg shadow-lg border" />
-              <Image src="/images/imagenscomdescricao/documento-patente-estados-unidos.png" alt="Patente dos Estados Unidos" width={300} height={400} className="rounded-lg shadow-lg border" />
+              <Image 
+                src="/images/imagenscomdescricao/documento-patente-brasil-inpi.png" 
+                alt="Patente do Brasil - INPI" 
+                width={300} 
+                height={400} 
+                className="rounded-lg shadow-lg border cursor-pointer hover:opacity-80 transition-opacity" 
+                onClick={() => openImageModal("/images/imagenscomdescricao/documento-patente-brasil-inpi.png", "Patente do Brasil - INPI")}
+              />
+              <Image 
+                src="/images/imagenscomdescricao/documento-patente-estados-unidos.png" 
+                alt="Patente dos Estados Unidos - USPTO" 
+                width={300} 
+                height={400} 
+                className="rounded-lg shadow-lg border cursor-pointer hover:opacity-80 transition-opacity" 
+                onClick={() => openImageModal("/images/imagenscomdescricao/documento-patente-estados-unidos.png", "Patente dos Estados Unidos - USPTO")}
+              />
             </div>
           </div>
         </div>
@@ -303,6 +329,34 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Image Zoom Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <button
+              onClick={closeImageModal}
+              className="absolute -top-12 right-0 text-white hover:text-orange-400 transition-colors z-10"
+              aria-label="Fechar modal"
+            >
+              <X size={32} />
+            </button>
+            <div className="bg-white rounded-lg p-2 shadow-2xl">
+              <Image
+                src={selectedImage.src}
+                alt={selectedImage.alt}
+                width={800}
+                height={1000}
+                className="w-full h-auto max-h-[80vh] object-contain rounded"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

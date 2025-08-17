@@ -63,14 +63,14 @@ export default function QuemSomos() {
             <div className="md:col-span-1">
               <Image 
                 src="/images/imagenscomdescricao/ShoppingFreiCanecaImagemaerea.png" 
-                alt="Vista aérea do Shopping Frei Caneca - projeto pioneiro de Michel Zenni" 
+                alt="Vista aérea do Shopping Frei Caneca - projeto pioneiro de Michel Zeenni" 
                 width={400} 
                 height={400} 
                 className="rounded-lg shadow-lg mx-auto object-cover"
               />
             </div>
             <div className="md:col-span-2 bg-white rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-4">Michel Zenni</h3>
+              <h3 className="text-2xl font-bold text-orange-600 mb-4">Michel Zeenni</h3>
               <p className="text-stone-700 mb-4 text-lg">Com mais de 40 anos de experiência, o fundador da TECHSUS tem uma trajetória marcada pela inovação:</p>
               <ul className="space-y-3 text-stone-700">
                 <li className="flex items-start">
@@ -79,7 +79,7 @@ export default function QuemSomos() {
                 </li>
                 <li className="flex items-start">
                   <Building2 className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Foi responsável pela construção do <strong>Shopping Frei Caneca</strong>, onde iniciou a industrialização da construção.
+                  Liderou a construção do icônico <strong>Shopping Frei Caneca</strong>, marco inicial da industrialização na construção civil.
                 </li>
                 <li className="flex items-start">
                   <Target className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />

@@ -77,8 +77,8 @@ export default function Investidores() {
               </p>
               <div className="bg-stone-50 border-l-4 border-orange-500 p-6 rounded-r-lg">
                 <Image 
-                  src="/images/imagenscomdescricao/diagrama-de-rede-de-fabricas.png"
-                  alt="Diagrama de Crescimento e Expansão"
+                  src="/images/imagenscomdescricao/infografico-mapa-deficit-habitacional-brasil.png"
+                  alt="Infográfico do Déficit Habitacional no Brasil - Oportunidade de Mercado"
                   width={500}
                   height={300}
                   className="rounded-lg shadow-md border"
@@ -87,8 +87,8 @@ export default function Investidores() {
             </div>
             <div className="lg:order-1">
               <Image 
-                src="/images/imagenscomdescricao/mapa-de-localizacao-de-fabricas-em-sao-paulo.png"
-                alt="Mapa de localização e potencial de mercado em São Paulo"
+                src="/images/imagenscomdescricao/slide-case-cnbm-housing-china.png"
+                alt="Case internacional de sucesso - CNBM Housing na China"
                 width={600}
                 height={450}
                 className="rounded-lg shadow-2xl border"

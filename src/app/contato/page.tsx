@@ -26,17 +26,17 @@ export default function Contato() {
             <div className="bg-stone-50 p-8 rounded-lg shadow-lg">
               <h3 className="text-2xl font-bold text-stone-900 mb-8">Nossos Contatos</h3>
               
-              {/* Michel Zenni Contact */}
+              {/* Michel Zeenni Contact */}
               <div className="flex items-center mb-8">
                 <Image 
                   src="/images/imagenscomdescricao/Michel Zeenni.png"
-                  alt="Retrato de Michel Zenni"
+                  alt="Retrato de Michel Zeenni"
                   width={100}
                   height={100}
                   className="rounded-full mr-6"
                 />
                 <div>
-                  <h4 className="text-xl font-bold text-stone-800">Michel Zenni</h4>
+                  <h4 className="text-xl font-bold text-stone-800">Michel Zeenni</h4>
                   <p className="text-stone-600">Fundador</p>
                   <div className="flex items-center mt-2">
                     <Mail className="h-5 w-5 text-orange-600 mr-2" />
@@ -63,7 +63,7 @@ export default function Contato() {
                   <p className="text-stone-600">Contato</p>
                   <div className="flex items-center mt-2">
                     <Mail className="h-5 w-5 text-orange-600 mr-2" />
-                    <a href="mailto:jeadwt@hotmail.com" className="text-stone-600 hover:text-orange-600">jeadwt@hotmail.com</a>
+                    <a href="mailto:jeadawt@gmail.com" className="text-stone-600 hover:text-orange-600">jeadawt@gmail.com</a>
                   </div>
                   <div className="flex items-center mt-1">
                     <Phone className="h-5 w-5 text-orange-600 mr-2" />
