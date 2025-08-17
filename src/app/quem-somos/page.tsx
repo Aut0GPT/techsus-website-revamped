@@ -62,11 +62,11 @@ export default function QuemSomos() {
           <div className="grid md:grid-cols-3 gap-8 items-center">
             <div className="md:col-span-1">
               <Image 
-                src="/images/imagenscomdescricao/Michel Zeenni.png" 
-                alt="Retrato do fundador Michel Zenni" 
+                src="/images/imagenscomdescricao/ShoppingFreiCanecaImagemaerea.png" 
+                alt="Vista aérea do Shopping Frei Caneca - projeto pioneiro de Michel Zenni" 
                 width={400} 
                 height={400} 
-                className="rounded-full shadow-lg mx-auto"
+                className="rounded-lg shadow-lg mx-auto object-cover"
               />
             </div>
             <div className="md:col-span-2 bg-white rounded-lg p-8 shadow-lg">
@@ -79,7 +79,7 @@ export default function QuemSomos() {
                 </li>
                 <li className="flex items-start">
                   <Building2 className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Foi responsável pela construção do Shopping Frei Caneca, onde iniciou a industrialização da construção.
+                  Foi responsável pela construção do <strong>Shopping Frei Caneca</strong>, onde iniciou a industrialização da construção.
                 </li>
                 <li className="flex items-start">
                   <Target className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />

@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/mercado/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/mercado/page.js"
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -11,15 +11,20 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/estrategia/page": [
+    "/quem-somos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/estrategia/page.js"
+      "static/chunks/app/quem-somos/page.js"
     ],
-    "/live-cameras/page": [
+    "/sistema/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/live-cameras/page.js"
+      "static/chunks/app/sistema/page.js"
+    ],
+    "/processo/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/processo/page.js"
     ]
   }
 }

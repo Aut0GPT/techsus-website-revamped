@@ -74,21 +74,58 @@ export default function Home() {
             <p className="text-lg text-stone-700 max-w-3xl mx-auto">Da fábrica ao canteiro de obras, nosso método garante eficiência e precisão.</p>
             <div className="w-20 h-1 bg-orange-600 mx-auto mt-4"></div>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center">
-              <Image src="/images/imagenscomdescricao/linha-de-producao-automatizada-paineis-concreto.png" alt="Linha de produção de painéis" width={400} height={300} className="rounded-lg shadow-lg mb-4" />
-              <h3 className="text-xl font-semibold">1. Fabricação</h3>
-              <p className="text-stone-600">Painéis produzidos em ambiente fabril controlado.</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="flex flex-col items-center text-center bg-stone-50 p-6 rounded-lg">
+              <div className="w-full h-48 mb-4 overflow-hidden rounded-lg shadow-lg">
+                <Image 
+                  src="/images/imagenscomdescricao/planta-baixa-de-implantacao-de-complexo-residencial.png" 
+                  alt="Planejamento e compatibilização de projetos" 
+                  width={300} 
+                  height={200} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">1. Planejamento</h3>
+              <p className="text-stone-600 text-sm">Compatibilização e desenvolvimento de projetos industriais detalhados.</p>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <Image src="/images/imagenscomdescricao/transporte-de-painel-concreto-em-caminhao-especial.png" alt="Transporte de painel" width={400} height={300} className="rounded-lg shadow-lg mb-4" />
-              <h3 className="text-xl font-semibold">2. Logística</h3>
-              <p className="text-stone-600">Transporte seguro e otimizado para o canteiro.</p>
+            <div className="flex flex-col items-center text-center bg-stone-50 p-6 rounded-lg">
+              <div className="w-full h-48 mb-4 overflow-hidden rounded-lg shadow-lg">
+                <Image 
+                  src="/images/imagenscomdescricao/linha-de-producao-automatizada-paineis-concreto.png" 
+                  alt="Fabricação industrial de painéis" 
+                  width={300} 
+                  height={200} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">2. Fabricação</h3>
+              <p className="text-stone-600 text-sm">Produção industrial em ambiente controlado com alta precisão.</p>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <Image src="/images/imagenscomdescricao/guindaste-icando-painel-de-concreto-na-fundacao.png" alt="Montagem de painel no canteiro" width={400} height={300} className="rounded-lg shadow-lg mb-4" />
-              <h3 className="text-xl font-semibold">3. Montagem</h3>
-              <p className="text-stone-600">Estrutura erguida com rapidez e precisão.</p>
+            <div className="flex flex-col items-center text-center bg-stone-50 p-6 rounded-lg">
+              <div className="w-full h-48 mb-4 overflow-hidden rounded-lg shadow-lg">
+                <Image 
+                  src="/images/imagenscomdescricao/transporte-de-painel-concreto-em-caminhao-especial.png" 
+                  alt="Logística e transporte especializado" 
+                  width={300} 
+                  height={200} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">3. Logística</h3>
+              <p className="text-stone-600 text-sm">Transporte seguro e otimizado para o canteiro de obras.</p>
+            </div>
+            <div className="flex flex-col items-center text-center bg-stone-50 p-6 rounded-lg">
+              <div className="w-full h-48 mb-4 overflow-hidden rounded-lg shadow-lg">
+                <Image 
+                  src="/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png" 
+                  alt="Montagem rápida no canteiro" 
+                  width={300} 
+                  height={200} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">4. Montagem</h3>
+              <p className="text-stone-600 text-sm">Estrutura erguida com rapidez e precisão no local.</p>
             </div>
           </div>
         </div>
