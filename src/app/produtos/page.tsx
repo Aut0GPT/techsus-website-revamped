@@ -8,10 +8,10 @@ const projects = [
     title: "Casas Térreas e Sobrados",
     description: "Modelos de residências que demonstram a versatilidade e a qualidade de acabamento do sistema TECHSUS para moradias unifamiliares.",
     images: [
-      "/images/imagenscomdescricao/familia-em-frente-a-casa-nova-com-detalhe-laranja.png",
-      "/images/imagenscomdescricao/casa-nova-com-detalhe-laranja-e-grama-nova.png",
       "/images/imagenscomdescricao/render-casa-terrea-com-detalhe-em-vermelho.png",
       "/images/imagenscomdescricao/render-casa-terrea-com-faixa-vermelha-vertical.png",
+      "/images/imagenscomdescricao/familia-em-frente-a-casa-nova-com-detalhe-laranja.png",
+      "/images/imagenscomdescricao/casa-nova-com-detalhe-laranja-e-grama-nova.png",
     ],
   },
   {
@@ -68,7 +68,7 @@ export default function Produtos() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {project.images.map((image, imgIndex) => {
                     // Determine if this image is a 3D project
-                    const is3D = (index === 0 && (imgIndex === 2 || imgIndex === 3)) || // Residencial: last 2 images
+                    const is3D = (index === 0 && (imgIndex === 0 || imgIndex === 1)) || // Residencial: first 2 images
                                  (index === 1 && imgIndex === 0); // Edifícios: first image
                     
                     return (
