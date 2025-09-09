@@ -26,8 +26,8 @@ const projects = [
     ],
   },
   {
-    category: "Fases da Construção",
-    title: "Do Alicerce ao Acabamento",
+    category: "Etapas de Montagem",
+    title: "Do alicerce até paredes estruturais de vedação",
     description: "Visão geral das etapas de construção, desde a fundação até a montagem final dos painéis no canteiro de obras.",
     images: [
       "/images/imagenscomdescricao/guindaste-icando-painel-de-concreto-na-fundacao.png",
@@ -66,17 +66,30 @@ export default function Produtos() {
                   <p className="text-stone-600 mt-1">{project.description}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {project.images.map((image, imgIndex) => (
-                    <div key={imgIndex} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border">
-                      <Image 
-                        src={image}
-                        alt={`${project.title} - Imagem ${imgIndex + 1}`}
-                        width={400}
-                        height={300}
-                        className="w-full h-64 object-cover"
-                      />
-                    </div>
-                  ))}
+                  {project.images.map((image, imgIndex) => {
+                    // Determine if this image is a 3D project
+                    const is3D = (index === 0 && (imgIndex === 2 || imgIndex === 3)) || // Residencial: last 2 images
+                                 (index === 1 && imgIndex === 0); // Edifícios: first image
+                    
+                    return (
+                      <div key={imgIndex} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border relative ${is3D ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}`}>
+                        <Image 
+                          src={image}
+                          alt={`${project.title} - Imagem ${imgIndex + 1}`}
+                          width={400}
+                          height={300}
+                          className="w-full h-64 object-cover"
+                        />
+                        {is3D && (
+                          <div className="absolute top-2 left-2">
+                            <span className="bg-blue-500 text-white px-2 py-1 rounded-md text-xs font-semibold shadow-lg">
+                              Projeto 3D
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
