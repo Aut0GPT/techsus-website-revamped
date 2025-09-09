@@ -256,24 +256,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Performance Summary */}
-          <div className="mt-12 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg p-8 text-center">
-            <h3 className="text-2xl font-bold mb-4">Impacto dos Nossos Projetos</h3>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div>
-                <div className="text-3xl font-bold mb-2">1,200+</div>
-                <div className="text-orange-200">m² Construídos</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold mb-2">24</div>
-                <div className="text-orange-200">Famílias Atendidas</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold mb-2">0</div>
-                <div className="text-orange-200">Retrabalhos Necessários</div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
