@@ -945,6 +945,10 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(187 247 208 / var(--tw-border-opacity, 1));
 }
+.border-orange-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(254 215 170 / var(--tw-border-opacity, 1));
+}
 .bg-black {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity, 1));
@@ -1011,6 +1015,11 @@ video {
   --tw-gradient-to: rgb(234 88 12 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
+.from-stone-100 {
+  --tw-gradient-from: #f5f5f4 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(245 245 244 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
 .via-stone-800 {
   --tw-gradient-to: rgb(41 37 36 / 0)  var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), #292524 var(--tw-gradient-via-position), var(--tw-gradient-to);
@@ -1023,6 +1032,9 @@ video {
 }
 .to-stone-800 {
   --tw-gradient-to: #292524 var(--tw-gradient-to-position);
+}
+.to-stone-50 {
+  --tw-gradient-to: #fafaf9 var(--tw-gradient-to-position);
 }
 .object-contain {
   -o-object-fit: contain;
