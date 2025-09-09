@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:techsus.ind.br)",
+      "WebFetch(domain:ai-sdk.dev)",
+      "WebFetch(domain:techsus.ind.br)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(cp:*)",
+      "WebFetch(domain:aoapahzp.manus.space)",
+      "Bash(ls:*)",
+      "WebFetch(domain:v5.ai-sdk.dev)",
+      "WebFetch(domain:v5.ai-sdk.dev)",
+      "WebFetch(domain:v5.ai-sdk.dev)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(find:*)",
+      "Bash(npm view:*)"
+    ],
+    "deny": []
+  }
+}

@@ -1,10 +1,6 @@
 {
-  "/investidores/page": "app/investidores/page.js",
-  "/mercado/page": "app/mercado/page.js",
-  "/processo/page": "app/processo/page.js",
-  "/produtos/page": "app/produtos/page.js",
-  "/live-cameras/page": "app/live-cameras/page.js",
   "/sistema/page": "app/sistema/page.js",
-  "/quem-somos/page": "app/quem-somos/page.js",
-  "/page": "app/page.js"
+  "/contato/page": "app/contato/page.js",
+  "/page": "app/page.js",
+  "/quem-somos/page": "app/quem-somos/page.js"
 }
