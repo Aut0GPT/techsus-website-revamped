@@ -201,20 +201,13 @@ export default function Mercado() {
               </div>
               <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-lg flex flex-col h-full">
                 <h4 className="text-lg font-bold text-stone-900 mb-4 text-center">Parceria CAIXA + Gov. SP</h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="flex justify-center mb-4">
                   <Image
                     src="/images/imagenscomdescricao/CaixaLogo.png"
                     alt="Logo da Caixa Econômica Federal"
                     width={200}
                     height={100}
                     className="object-contain w-full h-20"
-                  />
-                  <Image
-                    src="/images/imagenscomdescricao/GovernoSPTarcisiomostrandodocumento.png"
-                    alt="Governador de São Paulo, Tarcísio de Freitas"
-                    width={200}
-                    height={100}
-                    className="object-cover w-full h-20 rounded-md"
                   />
                 </div>
                 <div className="space-y-4 mt-auto">
