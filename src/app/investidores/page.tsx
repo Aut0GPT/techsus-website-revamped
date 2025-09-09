@@ -9,10 +9,6 @@ export default function Investidores() {
     <div className="min-h-screen bg-stone-50">
       <PageHeader 
         title="Relações com Investidores"
-        breadcrumb={[
-          { label: "Início", href: "/" },
-          { label: "Investidores" }
-        ]}
       />
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">

@@ -6,10 +6,6 @@ export default function Contato() {
     <div className="min-h-screen bg-stone-50">
       <PageHeader 
         title="Contato"
-        breadcrumb={[
-          { label: "Início", href: "/" },
-          { label: "Contato" }
-        ]}
       />
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">

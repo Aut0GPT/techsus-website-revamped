@@ -25,10 +25,6 @@ export default function LiveCameras() {
     <div className="min-h-screen bg-stone-100">
       <PageHeader 
         title="Câmeras ao Vivo"
-        breadcrumb={[
-          { label: "Início", href: "/" },
-          { label: "Câmeras ao Vivo" }
-        ]}
       />
       <section className="py-20">
         <div className="container mx-auto px-6 lg:px-8">

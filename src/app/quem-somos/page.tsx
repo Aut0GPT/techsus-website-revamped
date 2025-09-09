@@ -20,10 +20,6 @@ export default function QuemSomos() {
     <div className="min-h-screen bg-stone-50">
       <PageHeader 
         title="Quem Somos"
-        breadcrumb={[
-          { label: "Início", href: "/" },
-          { label: "Quem Somos" }
-        ]}
       />
 
       {/* About Company */}
@@ -209,15 +205,36 @@ export default function QuemSomos() {
                   <p className="text-sm font-semibold text-stone-900 mb-1">Certificado DATEC</p>
                   <p className="text-xs text-stone-600">Documento de Avaliação Técnica</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg border">
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <Image
+                    src="/images/imagenscomdescricao/CaixaLogo.png"
+                    alt="Logo da Caixa Econômica Federal"
+                    width={160}
+                    height={80}
+                    className="object-contain w-full h-16 mb-2 mx-auto"
+                  />
                   <p className="text-sm font-semibold text-stone-900 mb-1">Caixa Econômica Federal</p>
                   <p className="text-xs text-stone-600">Homologação Oficial</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg border">
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <Image
+                    src="/images/imagenscomdescricao/cdhusp_logo.jpg"
+                    alt="Logo da CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo"
+                    width={160}
+                    height={80}
+                    className="object-contain w-full h-16 mb-2 mx-auto"
+                  />
                   <p className="text-sm font-semibold text-stone-900 mb-1">CDHU</p>
                   <p className="text-xs text-stone-600">Companhia de Desenvolvimento Habitacional</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg border">
+                <div className="bg-white p-3 rounded-lg border text-center">
+                  <Image
+                    src="/images/imagenscomdescricao/logo_sinat.png"
+                    alt="Logo do SINAT - Sistema Nacional de Aprovações Técnicas"
+                    width={160}
+                    height={80}
+                    className="object-contain w-full h-16 mb-2 mx-auto"
+                  />
                   <p className="text-sm font-semibold text-stone-900 mb-1">SINAT</p>
                   <p className="text-xs text-stone-600">Sistema Nacional de Aprovações Técnicas</p>
                 </div>

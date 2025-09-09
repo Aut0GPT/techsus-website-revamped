@@ -8,10 +8,6 @@ export default function Sistema() {
     <div className="min-h-screen bg-stone-50">
       <PageHeader 
         title="Sistema Construtivo"
-        breadcrumb={[
-          { label: "Início", href: "/" },
-          { label: "Sistema" }
-        ]}
       />
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">

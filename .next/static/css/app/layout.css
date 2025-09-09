@@ -741,6 +741,9 @@ video {
 .h-full {
   height: 100%;
 }
+.h-16 {
+  height: 4rem;
+}
 .max-h-\[80vh\] {
   max-height: 80vh;
 }

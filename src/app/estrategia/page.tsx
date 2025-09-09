@@ -7,10 +7,6 @@ export default function Estrategia() {
     <div className="min-h-screen bg-stone-50">
       <PageHeader 
         title="Nossa Estratégia"
-        breadcrumb={[
-          { label: "Início", href: "/" },
-          { label: "Estratégia" }
-        ]}
       />
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">
