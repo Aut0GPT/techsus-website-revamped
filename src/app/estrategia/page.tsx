@@ -17,7 +17,7 @@ export default function Estrategia() {
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-stone-900 mb-4">Visão de Futuro</h2>
             <p className="text-lg text-stone-700 max-w-3xl mx-auto">
-              Nossa estratégia é liderar a transformação da construção civil no Brasil, tornando-a mais eficiente, sustentável e alinhada às demandas do século 21.
+              Nossa estratégia é liderar a transformação global da construção civil, iniciando no Brasil e expandindo para mercados internacionais, tornando a construção mais eficiente, sustentável e alinhada às demandas do século 21.
             </p>
           </div>
 
@@ -25,7 +25,7 @@ export default function Estrategia() {
             <div>
               <Image 
                 src="/images/imagenscomdescricao/mapa-de-localizacao-de-fabricas-em-sao-paulo.png"
-                alt="Mapa com a localização de fábricas no estado de São Paulo"
+                alt="Mapa estratégico de expansão industrial - iniciando em São Paulo com visão global"
                 width={600}
                 height={450}
                 className="rounded-lg shadow-2xl"
@@ -37,14 +37,14 @@ export default function Estrategia() {
                 <h3 className="text-2xl font-bold text-stone-900 ml-4">Expansão e Escalabilidade</h3>
               </div>
               <p className="text-lg text-stone-700 leading-relaxed mb-6">
-                Planejamos expandir nossa capacidade produtiva através de uma rede de fábricas estrategicamente localizadas, operando em um modelo de licenciamento e parceria. Isso nos permitirá atender a projetos em todo o território nacional com agilidade e custos logísticos reduzidos.
+                Planejamos expandir nossa capacidade produtiva através de uma rede global de fábricas estrategicamente localizadas, operando em um modelo de licenciamento e parceria. Iniciando no Brasil, nossa estratégia contempla expansão para mercados internacionais, aproveitando nossas patentes nos EUA e China para atender projetos globalmente com agilidade e custos logísticos otimizados.
               </p>
               <div className="flex items-center mb-4">
                 <Users className="h-10 w-10 text-orange-600" />
                 <h3 className="text-2xl font-bold text-stone-900 ml-4">Parcerias Estratégicas</h3>
               </div>
               <p className="text-lg text-stone-700 leading-relaxed">
-                Acreditamos no poder da colaboração. Buscamos parcerias com construtoras, incorporadoras, governos e instituições de pesquisa para acelerar a adoção da construção industrializada.
+                Acreditamos no poder da colaboração internacional. Buscamos parcerias com construtoras, incorporadoras, governos e instituições de pesquisa nos mercados brasileiro e internacional para acelerar a adoção global da construção industrializada.
               </p>
             </div>
           </div>
@@ -93,9 +93,9 @@ export default function Estrategia() {
         <div className="container mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="lg:order-2">
-              <h2 className="text-3xl font-bold text-stone-900 mb-6">Tecnologia e Expansão Estratégica</h2>
+              <h2 className="text-3xl font-bold text-stone-900 mb-6">Tecnologia e Expansão Global</h2>
                <p className="text-lg text-stone-700 mb-4 leading-relaxed">
-                Combinamos equipamentos industriais de última geração com uma estratégia de expansão geográfica inteligente. Nosso parque tecnológico avançado e rede de fábricas estrategicamente posicionadas nos permitem atender à crescente demanda por infraestrutura de qualidade.
+                Combinamos equipamentos industriais de última geração com uma estratégia de expansão geográfica global. Com patentes protegendo nossa tecnologia no Brasil, EUA e China, nosso parque tecnológico avançado e rede de fábricas estrategicamente posicionadas nos permitem atender à crescente demanda mundial por infraestrutura de qualidade e sustentável.
               </p>
             </div>
             <div className="lg:order-1 grid grid-cols-3 gap-4 items-center">
@@ -108,7 +108,7 @@ export default function Estrategia() {
               />
               <Image 
                 src="/images/imagenscomdescricao/Fabricas Localizacao.PNG"
-                alt="Mapa de localização de fábricas - Estratégia de expansão"
+                alt="Mapa de localização de fábricas - Estratégia de expansão global"
                 width={500}
                 height={375}
                 className="rounded-lg shadow-lg border col-span-2"
