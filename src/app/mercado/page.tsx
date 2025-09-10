@@ -47,8 +47,8 @@ export default function Mercado() {
               <Image 
                 src="/images/imagenscomdescricao/infografico-desafios-industria-construcao-civil - Editada.jpg"
                 alt="Infográfico sobre os desafios da construção civil"
-                width={600}
-                height={450}
+                width={660}
+                height={495}
                 className="rounded-lg shadow-2xl"
               />
             </div>
@@ -92,6 +92,16 @@ export default function Mercado() {
           {/* Key Market Metrics */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             <div className="bg-white border border-stone-200 p-6 rounded-lg text-center shadow-lg">
+              <div className="text-3xl font-bold text-stone-900 mb-2">R$10.54T</div>
+              <div className="text-sm text-stone-700 font-medium">Mercado Global</div>
+              <div className="text-xs text-stone-600 mt-1">10% do PIB mundial</div>
+            </div>
+            <div className="bg-white border border-stone-200 p-6 rounded-lg text-center shadow-lg">
+              <div className="text-3xl font-bold text-stone-900 mb-2">45.97M</div>
+              <div className="text-sm text-stone-700 font-medium">População SP (2024)</div>
+              <div className="text-xs text-stone-600 mt-1">+6.3% até 2030</div>
+            </div>
+            <div className="bg-white border border-stone-200 p-6 rounded-lg text-center shadow-lg">
               <div className="text-3xl font-bold text-stone-900 mb-2">6.2M</div>
               <div className="text-sm text-stone-700 font-medium">Déficit Habitacional Brasil</div>
               <div className="text-xs text-stone-600 mt-1">8.3% do total nacional</div>
@@ -100,16 +110,6 @@ export default function Mercado() {
               <div className="text-3xl font-bold text-stone-900 mb-2">1.2M</div>
               <div className="text-sm text-stone-700 font-medium">Déficit São Paulo</div>
               <div className="text-xs text-stone-600 mt-1">Maior do país</div>
-            </div>
-            <div className="bg-white border border-stone-200 p-6 rounded-lg text-center shadow-lg">
-              <div className="text-3xl font-bold text-stone-900 mb-2">45.97M</div>
-              <div className="text-sm text-stone-700 font-medium">População SP (2024)</div>
-              <div className="text-xs text-stone-600 mt-1">+6.3% até 2030</div>
-            </div>
-            <div className="bg-white border border-stone-200 p-6 rounded-lg text-center shadow-lg">
-              <div className="text-3xl font-bold text-stone-900 mb-2">R$10.54T</div>
-              <div className="text-sm text-stone-700 font-medium">Mercado Global</div>
-              <div className="text-xs text-stone-600 mt-1">10% do PIB mundial</div>
             </div>
           </div>
 
@@ -175,7 +175,16 @@ export default function Mercado() {
             <h3 className="text-2xl font-bold text-stone-900 mb-6 text-center">Programas Habitacionais em Andamento</h3>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-lg">
-                <h4 className="text-lg font-bold text-stone-900 mb-4">CDHU - Metas 2025</h4>
+                <h4 className="text-lg font-bold text-stone-900 mb-4 text-center">CDHU - Metas 2025</h4>
+                <div className="flex justify-center mb-4">
+                  <Image
+                    src="/images/imagenscomdescricao/cdhusp_logo.jpg"
+                    alt="Logo da CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo"
+                    width={120}
+                    height={80}
+                    className="object-contain"
+                  />
+                </div>
                 <ul className="space-y-3 text-stone-700">
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-orange-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>

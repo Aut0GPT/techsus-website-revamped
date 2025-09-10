@@ -94,20 +94,13 @@ export default function Estrategia() {
                 Combinamos equipamentos industriais de última geração com uma estratégia de expansão geográfica global. Com patentes protegendo nossa tecnologia no Brasil, EUA e China, nosso parque tecnológico avançado e rede de fábricas estrategicamente posicionadas nos permitem atender à crescente demanda mundial por infraestrutura de qualidade e sustentável.
               </p>
             </div>
-            <div className="lg:order-1 grid grid-cols-3 gap-4 items-center">
-              <Image 
-                src="/images/imagenscomdescricao/equipamento-industrial-azul-da-ebawe-progress-group.png"
-                alt="Equipamento industrial avançado - Tecnologia EBAWE Progress Group"
-                width={300}
-                height={225}
-                className="rounded-lg shadow-lg border col-span-1"
-              />
+            <div className="lg:order-1">
               <Image 
                 src="/images/imagenscomdescricao/Fabricas Localizacao.PNG"
                 alt="Mapa de localização de fábricas - Estratégia de expansão global"
-                width={500}
-                height={375}
-                className="rounded-lg shadow-lg border col-span-2"
+                width={600}
+                height={450}
+                className="rounded-lg shadow-lg border"
               />
             </div>
           </div>

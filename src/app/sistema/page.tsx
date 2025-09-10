@@ -60,8 +60,8 @@ export default function Sistema() {
               <Image 
                 src="/images/imagenscomdescricao/desenhos-tecnicos-de-conexoes-entre-paineis.png" 
                 alt="Detalhes técnicos das nervuras e ligações" 
-                width={500} 
-                height={400} 
+                width={630} 
+                height={504} 
                 className="rounded-lg shadow-lg border"
               />
               <p className="text-sm text-stone-600 mt-2">Tipos de nervuras e ligações entre painéis.</p>
@@ -90,12 +90,12 @@ export default function Sistema() {
           </div>
           <div className="grid md:grid-cols-2 gap-8 items-start">
             <div className="text-center">
-              <div className="relative h-64 w-full mb-4 overflow-hidden rounded-lg shadow-lg">
+              <div className="relative h-96 w-full mb-4 overflow-hidden rounded-lg shadow-lg">
                 <Image 
                   src="/images/imagenscomdescricao/linha-de-producao-automatizada-paineis-concreto.png" 
                   alt="Produção de painéis em fábrica" 
-                  width={500} 
-                  height={350} 
+                  width={600} 
+                  height={600} 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -103,12 +103,12 @@ export default function Sistema() {
               <p className="text-stone-600 text-base">Qualidade e precisão garantidas em ambiente industrial.</p>
             </div>
             <div className="text-center">
-              <div className="relative h-64 w-full mb-4 overflow-hidden rounded-lg shadow-lg">
+              <div className="relative h-96 w-full mb-4 overflow-hidden rounded-lg shadow-lg">
                 <Image 
-                  src="/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png" 
-                  alt="Montagem de uma casa com painéis de concreto" 
-                  width={500} 
-                  height={350} 
+                  src="/images/imagenscomdescricao/painel-premoldado-sendo-icado-em-arranha-ceu.png" 
+                  alt="Painel pré-moldado sendo içado em arranha-céu" 
+                  width={600} 
+                  height={600} 
                   className="w-full h-full object-cover"
                 />
               </div>

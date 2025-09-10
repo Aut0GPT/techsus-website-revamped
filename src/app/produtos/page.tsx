@@ -21,8 +21,8 @@ const projects = [
     description: "Edifícios residenciais de múltiplos andares construídos com o sistema, provando sua eficácia em projetos verticais de grande escala.",
     media: [
       { type: "image", src: "/images/imagenscomdescricao/perspectivas-de-habitacional-vertical-multifamiliar.png", alt: "Perspectivas de habitacional vertical multifamiliar" },
-      { type: "image", src: "/images/imagenscomdescricao/fileira-de-predios-residenciais-novos-de-dois-andares.png", alt: "Fileira de prédios residenciais novos de dois andares" },
-      { type: "image", src: "/images/imagenscomdescricao/duque2.jpg", alt: "Prédios residenciais novos com tela de proteção laranja" },
+      { type: "image", src: "/images/imagenscomdescricao/duque2.jpg", alt: "Fileira de prédios residenciais novos de dois andares" },
+      { type: "image", src: "/images/imagenscomdescricao/fileira-de-predios-residenciais-novos-de-dois-andares.png", alt: "Prédios residenciais novos com tela de proteção laranja" },
       { type: "image", src: "/images/imagenscomdescricao/canteiro-de-obras-com-predio-em-construcao-e-predios-acabados.png", alt: "Canteiro de obras com prédio em construção e prédios acabados" },
     ],
   },
