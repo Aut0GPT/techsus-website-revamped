@@ -49,16 +49,6 @@ export default function Sistema() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 items-center">
-             <div className="text-center">
-              <Image 
-                src="/images/imagenscomdescricao/desenho-tecnico-da-conexao-entre-laje-e-paineis.png" 
-                alt="Detalhe técnico da conexão entre laje e painéis" 
-                width={500} 
-                height={400} 
-                className="rounded-lg shadow-lg border"
-              />
-               <p className="text-sm text-stone-600 mt-2">Seção transversal da conexão entre painel e laje.</p>
-            </div>
             <div className="text-center">
               <Image 
                 src="/images/imagenscomdescricao/desenhos-tecnicos-de-conexoes-entre-paineis.png" 
@@ -68,6 +58,16 @@ export default function Sistema() {
                 className="rounded-lg shadow-lg border"
               />
               <p className="text-sm text-stone-600 mt-2">Tipos de nervuras e ligações entre painéis.</p>
+            </div>
+             <div className="text-center">
+              <Image 
+                src="/images/imagenscomdescricao/durodurocerto.jpg" 
+                alt="Detalhe técnico da conexão entre laje e painéis" 
+                width={500} 
+                height={400} 
+                className="rounded-lg shadow-lg border"
+              />
+               <p className="text-sm text-stone-600 mt-2">Seção transversal da conexão entre painel e laje.</p>
             </div>
           </div>
         </div>

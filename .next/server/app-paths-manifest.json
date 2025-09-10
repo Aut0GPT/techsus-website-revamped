@@ -1,7 +1,4 @@
 {
   "/sistema/page": "app/sistema/page.js",
-  "/produtos/page": "app/produtos/page.js",
-  "/mercado/page": "app/mercado/page.js",
-  "/estrategia/page": "app/estrategia/page.js",
-  "/investidores/page": "app/investidores/page.js"
+  "/page": "app/page.js"
 }
