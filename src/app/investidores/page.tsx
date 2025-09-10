@@ -1,7 +1,6 @@
 
 import PageHeader from "@/components/PageHeader";
 import Image from "next/image";
-import { TrendingUp, ShieldCheck, Globe, BarChart } from "lucide-react";
 import Link from "next/link";
 
 export default function Investidores() {
@@ -45,17 +44,14 @@ export default function Investidores() {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-lg shadow-lg">
-              <ShieldCheck className="h-10 w-10 text-orange-600 mb-4" />
               <h3 className="text-xl font-bold text-stone-900 mb-3">Tecnologia Patenteada</h3>
               <p className="text-stone-700">Proteção intelectual no Brasil, EUA e China, criando uma forte barreira de entrada e garantindo nossa exclusividade no mercado.</p>
             </div>
             <div className="bg-white p-8 rounded-lg shadow-lg">
-              <TrendingUp className="h-10 w-10 text-orange-600 mb-4" />
               <h3 className="text-xl font-bold text-stone-900 mb-3">Mercado de Alto Crescimento</h3>
               <p className="text-stone-700">Atuação em um setor com demanda reprimida e um déficit habitacional de mais de 6 milhões de unidades no Brasil.</p>
             </div>
             <div className="bg-white p-8 rounded-lg shadow-lg">
-              <Globe className="h-10 w-10 text-orange-600 mb-4" />
               <h3 className="text-xl font-bold text-stone-900 mb-3">Modelo de Negócio Escalável</h3>
               <p className="text-stone-700">Expansão através de licenciamento e parcerias, permitindo um crescimento acelerado com menor necessidade de capital intensivo.</p>
             </div>
