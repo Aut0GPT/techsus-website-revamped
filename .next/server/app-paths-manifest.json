@@ -1,5 +1,6 @@
 {
   "/mercado/page": "app/mercado/page.js",
   "/estrategia/page": "app/estrategia/page.js",
-  "/investidores/page": "app/investidores/page.js"
+  "/investidores/page": "app/investidores/page.js",
+  "/parcerias/page": "app/parcerias/page.js"
 }

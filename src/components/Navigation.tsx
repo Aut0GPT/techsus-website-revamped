@@ -13,6 +13,7 @@ const navigationLinks = [
   { href: '/produtos', label: 'Produtos' },
   { href: '/mercado', label: 'Mercado' },
   { href: '/estrategia', label: 'Estratégia' },
+  { href: '/parcerias', label: 'Parcerias' },
   { href: '/investidores', label: 'Investidores' },
   { href: '/live-cameras', label: 'Câmeras ao Vivo' },
   { href: '/contato', label: 'Contato' },

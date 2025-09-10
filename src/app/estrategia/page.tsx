@@ -20,7 +20,7 @@ export default function Estrategia() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <Image 
-                src="/images/imagenscomdescricao/mapa-de-localizacao-de-fabricas-em-sao-paulo.png"
+                src="/images/imagenscomdescricao/WhatsApp Image 2025-09-10 at 11.09.01_d3d5abe4.jpg"
                 alt="Mapa estratégico de expansão industrial - iniciando em São Paulo com visão global"
                 width={600}
                 height={450}
@@ -89,10 +89,36 @@ export default function Estrategia() {
         <div className="container mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="lg:order-2">
-              <h2 className="text-3xl font-bold text-stone-900 mb-6">Tecnologia e Expansão Global</h2>
-               <p className="text-lg text-stone-700 mb-4 leading-relaxed">
-                Combinamos equipamentos industriais de última geração com uma estratégia de expansão geográfica global. Com patentes protegendo nossa tecnologia no Brasil, EUA e China, nosso parque tecnológico avançado e rede de fábricas estrategicamente posicionadas nos permitem atender à crescente demanda mundial por infraestrutura de qualidade e sustentável.
-              </p>
+              <h2 className="text-3xl font-bold text-stone-900 mb-6">Estratégia de expansão – Visão de Curto prazo</h2>
+              <ul className="text-lg text-stone-700 leading-relaxed mb-8 space-y-3">
+                <li className="flex items-start">
+                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
+                  Implantação de no mínimo 10 fábricas nos próximos 5 anos.
+                </li>
+                <li className="flex items-start">
+                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
+                  Desenvolvimento de novos produtos e patentes complementares ao sistema existente.
+                </li>
+              </ul>
+              <h3 className="text-2xl font-bold text-stone-900 mb-4">Vantagens do modelo:</h3>
+              <ul className="text-lg text-stone-700 leading-relaxed space-y-3">
+                <li className="flex items-start">
+                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
+                  Demanda garantida pela produção das fábricas interligadas e estrategicamente posicionadas;
+                </li>
+                <li className="flex items-start">
+                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
+                  Lucratividade equilibrada e sustentável;
+                </li>
+                <li className="flex items-start">
+                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
+                  Economia de escala em insumos e recursos;
+                </li>
+                <li className="flex items-start">
+                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
+                  Gestão centralizada de conhecimento e tecnologia.
+                </li>
+              </ul>
             </div>
             <div className="lg:order-1">
               <Image 
