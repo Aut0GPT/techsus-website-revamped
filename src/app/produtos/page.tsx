@@ -7,33 +7,34 @@ const projects = [
     category: "Residencial Unifamiliar",
     title: "Casas Térreas e Sobrados",
     description: "Modelos de residências que demonstram a versatilidade e a qualidade de acabamento do sistema TECHSUS para moradias unifamiliares.",
-    images: [
-      "/images/imagenscomdescricao/render-casa-terrea-com-detalhe-em-vermelho.png",
-      "/images/imagenscomdescricao/render-casa-terrea-com-faixa-vermelha-vertical.png",
-      "/images/imagenscomdescricao/familia-em-frente-a-casa-nova-com-detalhe-laranja.png",
-      "/images/imagenscomdescricao/casa-nova-com-detalhe-laranja-e-grama-nova.png",
+    media: [
+      { type: "image", src: "/images/imagenscomdescricao/render-casa-terrea-com-detalhe-em-vermelho.png", alt: "Render 3D casa térrea com detalhe vermelho" },
+      { type: "image", src: "/images/imagenscomdescricao/render-casa-terrea-com-faixa-vermelha-vertical.png", alt: "Render 3D casa térrea com faixa vermelha vertical" },
+      { type: "video", src: "/images/imagenscomdescricao/WhatsApp Video 2025-09-10 at 10.17.53_0e18d3f6.mp4", alt: "Vídeo demonstrativo da construção residencial" },
+      { type: "image", src: "/images/imagenscomdescricao/familia-em-frente-a-casa-nova-com-detalhe-laranja.png", alt: "Família em frente à casa nova construída" },
+      { type: "image", src: "/images/imagenscomdescricao/casa-nova-com-detalhe-laranja-e-grama-nova.png", alt: "Casa nova com acabamento e jardim" },
     ],
   },
   {
     category: "Edifícios Multifamiliares",
     title: "Prédios Habitacionais",
     description: "Edifícios residenciais de múltiplos andares construídos com o sistema, provando sua eficácia em projetos verticais de grande escala.",
-    images: [
-      "/images/imagenscomdescricao/perspectivas-de-habitacional-vertical-multifamiliar.png",
-      "/images/imagenscomdescricao/fileira-de-predios-residenciais-novos-de-dois-andares.png",
-      "/images/imagenscomdescricao/predios-residenciais-novos-com-tela-de-protecao-laranja.png",
-      "/images/imagenscomdescricao/canteiro-de-obras-com-predio-em-construcao-e-predios-acabados.png",
+    media: [
+      { type: "image", src: "/images/imagenscomdescricao/perspectivas-de-habitacional-vertical-multifamiliar.png", alt: "Perspectivas de habitacional vertical multifamiliar" },
+      { type: "image", src: "/images/imagenscomdescricao/fileira-de-predios-residenciais-novos-de-dois-andares.png", alt: "Fileira de prédios residenciais novos de dois andares" },
+      { type: "image", src: "/images/imagenscomdescricao/duque2.jpg", alt: "Prédios residenciais novos com tela de proteção laranja" },
+      { type: "image", src: "/images/imagenscomdescricao/canteiro-de-obras-com-predio-em-construcao-e-predios-acabados.png", alt: "Canteiro de obras com prédio em construção e prédios acabados" },
     ],
   },
   {
     category: "Etapas de Montagem",
     title: "Do alicerce até paredes estruturais de vedação",
     description: "Visão geral das etapas de construção, desde a fundação até a montagem final dos painéis no canteiro de obras.",
-    images: [
-      "/images/imagenscomdescricao/guindaste-icando-painel-de-concreto-na-fundacao.png",
-      "/images/imagenscomdescricao/guindaste-posicionando-painel-de-canto-na-fundacao.png",
-      "/images/imagenscomdescricao/trabalhadores-montando-as-paredes-de-uma-casa-de-concreto.png",
-      "/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png",
+    media: [
+      { type: "image", src: "/images/imagenscomdescricao/guindaste-icando-painel-de-concreto-na-fundacao.png", alt: "Guindaste içando painel de concreto na fundação" },
+      { type: "image", src: "/images/imagenscomdescricao/guindaste.jpg", alt: "Guindaste posicionando painéis de concreto" },
+      { type: "image", src: "/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png", alt: "Trabalhadores montando casa de painéis de concreto" },
+      { type: "image", src: "/images/imagenscomdescricao/casa feita.jpg", alt: "Casa finalizada construída com painéis de concreto" },
     ],
   },
 ];
@@ -62,20 +63,31 @@ export default function Produtos() {
                   <p className="text-stone-600 mt-1">{project.description}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {project.images.map((image, imgIndex) => {
-                    // Determine if this image is a 3D project
-                    const is3D = (index === 0 && (imgIndex === 0 || imgIndex === 1)) || // Residencial: first 2 images
-                                 (index === 1 && imgIndex === 0); // Edifícios: first image
+                  {project.media.map((mediaItem, mediaIndex) => {
+                    // Determine if this media is a 3D project
+                    const is3D = (index === 0 && (mediaIndex === 0 || mediaIndex === 1)) || // Residencial: first 2 media items
+                                 (index === 1 && mediaIndex === 0); // Edifícios: first media item
                     
                     return (
-                      <div key={imgIndex} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border relative ${is3D ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}`}>
-                        <Image 
-                          src={image}
-                          alt={`${project.title} - Imagem ${imgIndex + 1}`}
-                          width={400}
-                          height={300}
-                          className="w-full h-64 object-cover"
-                        />
+                      <div key={mediaIndex} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border relative ${is3D ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}`}>
+                        {mediaItem.type === 'image' ? (
+                          <Image 
+                            src={mediaItem.src}
+                            alt={mediaItem.alt}
+                            width={400}
+                            height={300}
+                            className="w-full h-64 object-cover"
+                          />
+                        ) : (
+                          <video 
+                            className="w-full h-64 object-cover"
+                            controls
+                            preload="metadata"
+                          >
+                            <source src={mediaItem.src} type="video/mp4" />
+                            Seu navegador não suporta o elemento de vídeo.
+                          </video>
+                        )}
                         {is3D && (
                           <div className="absolute top-2 left-2">
                             <span className="bg-blue-500 text-white px-2 py-1 rounded-md text-xs font-semibold shadow-lg">

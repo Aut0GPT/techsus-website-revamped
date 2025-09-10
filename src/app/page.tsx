@@ -244,7 +244,10 @@ export default function Home() {
             </div>
             
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <Image src="/images/imagenscomdescricao/predios-residenciais-novos-com-tela-de-protecao-laranja.png" alt="Edifício em Duque de Caxias" width={400} height={240} className="w-full h-48 object-cover" />
+              <div className="grid grid-cols-2 gap-1 h-48">
+                <Image src="/images/imagenscomdescricao/duque1.jpg" alt="Edifício em Duque de Caxias - Vista 1" width={200} height={240} className="w-full h-full object-cover" />
+                <Image src="/images/imagenscomdescricao/duque2.jpg" alt="Edifício em Duque de Caxias - Vista 2" width={200} height={240} className="w-full h-full object-cover" />
+              </div>
               <div className="p-4">
                 <h4 className="text-lg font-bold text-stone-900 mb-2">Edifício T+3 - Duque de Caxias/RJ</h4>
                 <p className="text-stone-600 text-sm mb-3">Expansão regional demonstrando escalabilidade do sistema construtivo.</p>

@@ -30,12 +30,19 @@ export default function Sistema() {
                 <li className="flex items-start"><CheckCircle className="h-6 w-6 text-green-600 mr-3 flex-shrink-0" /><span>Instalações elétricas e hidráulicas já embutidas.</span></li>
               </ul>
             </div>
-            <div>
+            <div className="space-y-6">
               <Image 
-                src="/images/imagenscomdescricao/desenho-tecnico-esquema-geral-do-painel.png" 
-                alt="Esquema geral do painel de concreto" 
+                src="/images/imagenscomdescricao/WhatsApp Image 2025-09-10 at 10.06.40_18ced841.jpg" 
+                alt="Esquema técnico do painel de concreto - Parte 1" 
                 width={600} 
-                height={400} 
+                height={450} 
+                className="rounded-lg shadow-lg border"
+              />
+              <Image 
+                src="/images/imagenscomdescricao/WhatsApp Image 2025-09-10 at 10.12.33_e844e3ba.jpg" 
+                alt="Esquema técnico do painel de concreto - Parte 2" 
+                width={600} 
+                height={450} 
                 className="rounded-lg shadow-lg border"
               />
             </div>
