@@ -10,9 +10,9 @@ const projects = [
     media: [
       { type: "image", src: "/images/imagenscomdescricao/render-casa-terrea-com-detalhe-em-vermelho.png", alt: "Render 3D casa térrea com detalhe vermelho" },
       { type: "image", src: "/images/imagenscomdescricao/render-casa-terrea-com-faixa-vermelha-vertical.png", alt: "Render 3D casa térrea com faixa vermelha vertical" },
-      { type: "video", src: "/images/imagenscomdescricao/WhatsApp Video 2025-09-10 at 10.17.53_0e18d3f6.mp4", alt: "Vídeo demonstrativo da construção residencial" },
       { type: "image", src: "/images/imagenscomdescricao/familia-em-frente-a-casa-nova-com-detalhe-laranja.png", alt: "Família em frente à casa nova construída" },
       { type: "image", src: "/images/imagenscomdescricao/casa-nova-com-detalhe-laranja-e-grama-nova.png", alt: "Casa nova com acabamento e jardim" },
+      { type: "video", src: "/images/imagenscomdescricao/WhatsApp Video 2025-09-10 at 10.17.53_0e18d3f6.mp4", alt: "Vídeo demonstrativo da construção residencial" },
     ],
   },
   {
@@ -68,8 +68,11 @@ export default function Produtos() {
                     const is3D = (index === 0 && (mediaIndex === 0 || mediaIndex === 1)) || // Residencial: first 2 media items
                                  (index === 1 && mediaIndex === 0); // Edifícios: first media item
                     
+                    // Check if this is the video in the Residencial Unifamiliar section
+                    const isVideoToCenter = index === 0 && mediaItem.type === 'video';
+                    
                     return (
-                      <div key={mediaIndex} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border relative ${is3D ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}`}>
+                      <div key={mediaIndex} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border relative ${is3D ? 'ring-2 ring-blue-400 ring-opacity-50' : ''} ${isVideoToCenter ? 'lg:col-start-2 lg:col-span-2' : ''}`}>
                         {mediaItem.type === 'image' ? (
                           <Image 
                             src={mediaItem.src}
@@ -80,7 +83,7 @@ export default function Produtos() {
                           />
                         ) : (
                           <video 
-                            className="w-full h-64 object-cover"
+                            className="w-full h-80 object-cover"
                             controls
                             preload="metadata"
                           >
