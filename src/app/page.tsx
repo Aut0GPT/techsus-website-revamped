@@ -266,29 +266,37 @@ export default function Home() {
             <div>
               <h2 className="text-3xl font-bold text-stone-900 mb-6">Tecnologia Patenteada e Comprovada</h2>
               <p className="text-lg text-stone-700 mb-4 leading-relaxed">
-                Nosso sistema construtivo possui proteção intelectual no Brasil e nos EUA, além de ser validado por rigorosos testes em laboratórios credenciados como o IPT.
+                Nosso sistema construtivo possui proteção intelectual no Brasil, EUA e China, além de ser validado por rigorosos testes em laboratórios credenciados como o IPT.
               </p>
               <div className="flex items-start space-x-4">
                 <ShieldCheck className="h-8 w-8 text-orange-600 mt-1" />
                 <p className="text-stone-700">As certificações técnicas atestam a conformidade normativa e a qualidade superior do nosso processo industrializado, garantindo segurança e durabilidade.</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <Image 
                 src="/images/imagenscomdescricao/documento-patente-brasil-inpi.png" 
                 alt="Patente do Brasil - INPI" 
-                width={300} 
-                height={400} 
+                width={250} 
+                height={350} 
                 className="rounded-lg shadow-lg border cursor-pointer hover:opacity-80 transition-opacity" 
                 onClick={() => openImageModal("/images/imagenscomdescricao/documento-patente-brasil-inpi.png", "Patente do Brasil - INPI")}
               />
               <Image 
                 src="/images/imagenscomdescricao/documento-patente-estados-unidos.png" 
                 alt="Patente dos Estados Unidos - USPTO" 
-                width={300} 
-                height={400} 
+                width={250} 
+                height={350} 
                 className="rounded-lg shadow-lg border cursor-pointer hover:opacity-80 transition-opacity" 
                 onClick={() => openImageModal("/images/imagenscomdescricao/documento-patente-estados-unidos.png", "Patente dos Estados Unidos - USPTO")}
+              />
+              <Image 
+                src="/images/imagenscomdescricao/Certificado de Patente - CHINA nº 2017800928093.jpg" 
+                alt="Patente da China - SIPO" 
+                width={250} 
+                height={350} 
+                className="rounded-lg shadow-lg border cursor-pointer hover:opacity-80 transition-opacity" 
+                onClick={() => openImageModal("/images/imagenscomdescricao/Certificado de Patente - CHINA nº 2017800928093.jpg", "Patente da China - SIPO")}
               />
             </div>
           </div>

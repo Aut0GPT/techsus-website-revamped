@@ -48,6 +48,58 @@ export default function QuemSomos() {
         </div>
       </section>
 
+      {/* ODS and ESG Section */}
+      <section className="py-20 bg-stone-100">
+        <div className="container mx-auto px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-stone-900 mb-4">Compromisso com a Sustentabilidade</h2>
+            <p className="text-lg text-stone-700 max-w-4xl mx-auto">
+              Posicionada na vanguarda da Revolução Industrial 4.0 com automação e modelagem de informação, esse modelo evolui em consonância com as agendas ODS - Objetivos de Desenvolvimento Sustentável.
+            </p>
+            <div className="w-20 h-1 bg-orange-600 mx-auto mt-4"></div>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-orange-600">9</span>
+              </div>
+              <h3 className="text-lg font-semibold text-stone-900 mb-2">ODS 9</h3>
+              <p className="text-stone-600 text-sm">Indústria, inovação e infraestrutura</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-orange-600">11</span>
+              </div>
+              <h3 className="text-lg font-semibold text-stone-900 mb-2">ODS 11</h3>
+              <p className="text-stone-600 text-sm">Cidades e comunidades sustentáveis</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-orange-600">12</span>
+              </div>
+              <h3 className="text-lg font-semibold text-stone-900 mb-2">ODS 12</h3>
+              <p className="text-stone-600 text-sm">Consumo e produção responsáveis</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-orange-600">13</span>
+              </div>
+              <h3 className="text-lg font-semibold text-stone-900 mb-2">ODS 13</h3>
+              <p className="text-stone-600 text-sm">Ação contra mudança global do clima</p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+              <h3 className="text-xl font-bold text-stone-900 mb-4">Agenda ESG</h3>
+              <p className="text-lg text-stone-700 leading-relaxed">
+                Além dos benefícios econômicos e de escala, o método construtivo atende a agenda ESG, já que há substancial economia de recursos naturais e consequente diminuição de atividades poluentes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Trajectory and Milestones */}
       <section className="py-20 bg-white">
