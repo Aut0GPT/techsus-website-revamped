@@ -48,44 +48,6 @@ export default function QuemSomos() {
         </div>
       </section>
 
-      {/* Founder Section */}
-      <section className="py-20 bg-stone-100">
-        <div className="container mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Nosso Fundador</h2>
-            <div className="w-20 h-1 bg-orange-600 mx-auto"></div>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 items-center">
-            <div className="md:col-span-1">
-              <Image 
-                src="/images/imagenscomdescricao/ShoppingFreiCanecaImagemaerea.png" 
-                alt="Vista aérea do Shopping Frei Caneca - projeto pioneiro de Michel Zeenni" 
-                width={400} 
-                height={400} 
-                className="rounded-lg shadow-lg mx-auto object-cover"
-              />
-            </div>
-            <div className="md:col-span-2 bg-white rounded-lg p-8 shadow-lg">
-              <h3 className="text-2xl font-bold text-orange-600 mb-4">Michel Zeenni</h3>
-              <p className="text-stone-700 mb-4 text-lg">Com mais de 40 anos de experiência, o fundador da TECHSUS tem uma trajetória marcada pela inovação:</p>
-              <ul className="space-y-3 text-stone-700">
-                <li className="flex items-start">
-                  <Award className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Atuou como projetista estrutural e empreendedor na construção civil.
-                </li>
-                <li className="flex items-start">
-                  <Building2 className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Liderou a construção do icônico <strong>Shopping Frei Caneca</strong>, marco inicial da industrialização na construção civil.
-                </li>
-                <li className="flex items-start">
-                  <Target className="h-5 w-5 text-orange-600 mt-1 mr-3 flex-shrink-0" />
-                  Montou a primeira fábrica estacionária de pré-fabricados em 2009, dando início à industrialização da construção habitacional.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Trajectory and Milestones */}
       <section className="py-20 bg-white">
