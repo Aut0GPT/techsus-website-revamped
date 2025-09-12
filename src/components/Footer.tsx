@@ -22,9 +22,9 @@ export default async function Footer({ locale }: FooterProps) {
           <div>
             <h3 className="text-lg font-semibold mb-4">{dict.footer.quick_links}</h3>
             <ul className="space-y-2">
-              <li><Link href={`/${locale}/quem-somos`} className="text-stone-400 hover:text-orange-500">{dict.footer.company}</Link></li>
-              <li><Link href={`/${locale}/sistema`} className="text-stone-400 hover:text-orange-500">{dict.footer.system}</Link></li>
-              <li><Link href={`/${locale}/contato`} className="text-stone-400 hover:text-orange-500">{dict.footer.contact}</Link></li>
+              <li><Link href={locale === 'pt' ? '/quem-somos' : `/${locale}/quem-somos`} className="text-stone-400 hover:text-orange-500">{dict.footer.company}</Link></li>
+              <li><Link href={locale === 'pt' ? '/sistema' : `/${locale}/sistema`} className="text-stone-400 hover:text-orange-500">{dict.footer.system}</Link></li>
+              <li><Link href={locale === 'pt' ? '/contato' : `/${locale}/contato`} className="text-stone-400 hover:text-orange-500">{dict.footer.contact}</Link></li>
             </ul>
           </div>
           <div>
