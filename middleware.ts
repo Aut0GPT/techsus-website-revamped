@@ -11,7 +11,11 @@ function getLocale(request: NextRequest): string {
   const headers = { 'accept-language': acceptedLanguage }
   const languages = new Negotiator({ headers }).languages()
 
-  return match(languages, locales, defaultLocale)
+  try {
+    return match(languages, locales, defaultLocale)
+  } catch (error) {
+    return defaultLocale
+  }
 }
 
 export function middleware(request: NextRequest) {
@@ -26,11 +30,14 @@ export function middleware(request: NextRequest) {
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request)
 
+    // Handle root path specially
+    if (pathname === '/') {
+      return NextResponse.redirect(new URL(`/${locale}`, request.url))
+    }
+
+    // Handle other paths
     return NextResponse.redirect(
-      new URL(
-        `/${locale}${pathname.startsWith('/') ? '' : '/'}${pathname}`,
-        request.url
-      )
+      new URL(`/${locale}${pathname}`, request.url)
     )
   }
 }
