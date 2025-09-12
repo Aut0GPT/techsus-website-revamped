@@ -1,78 +1,22 @@
-
 import PageHeader from "@/components/PageHeader";
-import Image from "next/image";
-import Link from "next/link";
+import { getDictionary } from "@/lib/dictionaries";
 
-export default function Investidores() {
+export default async function PageEs() {
+  const dict = await getDictionary('es');
+
   return (
     <div className="min-h-screen bg-stone-50">
-      <PageHeader 
-        title="Relações com Investidores"
+      <PageHeader
+        title="Próximamente"
       />
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-stone-900 mb-6">Investindo na Construção do Futuro</h2>
-              <p className="text-lg text-stone-700 mb-4 leading-relaxed">
-                A TECHSUS representa uma oportunidade única de investimento em um setor tradicional com enorme potencial de disrupção. Nossa tecnologia patenteada e modelo de negócio escalável nos posicionam para capturar uma parcela significativa de um dos maiores mercados da economia.
-              </p>
-              <p className="text-lg text-stone-700 leading-relaxed">
-                Oferecemos uma tese de investimento sólida, baseada em eficiência operacional, vantagens competitivas claras e um forte alinhamento com as tendências globais de sustentabilidade (ESG).
-              </p>
-            </div>
-            <div>
-              <Image 
-                src="/images/imagenscomdescricao/paisagem-urbana-sao-paulo-ponte-estaiada.png"
-                alt="Skyline de São Paulo com a Ponte Estaiada"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-2xl"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-stone-100">
-        <div className="container mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Nossos Diferenciais Competitivos</h2>
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-stone-900 mb-6">Próximamente</h2>
             <p className="text-lg text-stone-700 max-w-3xl mx-auto">
-              Nossa estratégia é fundamentada em pilares que garantem a sustentabilidade e o crescimento do negócio a longo prazo.
+              Esta página está en construcción. Por favor, visítanos pronto.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-lg shadow-lg">
-              <h3 className="text-xl font-bold text-stone-900 mb-3">Tecnologia Patenteada</h3>
-              <p className="text-stone-700">Proteção intelectual no Brasil, EUA e China, criando uma forte barreira de entrada e garantindo nossa exclusividade no mercado.</p>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-lg">
-              <h3 className="text-xl font-bold text-stone-900 mb-3">Mercado de Alto Crescimento</h3>
-              <p className="text-stone-700">Atuação em um setor com demanda reprimida e um déficit habitacional de mais de 6 milhões de unidades no Brasil.</p>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-lg">
-              <h3 className="text-xl font-bold text-stone-900 mb-3">Modelo de Negócio Escalável</h3>
-              <p className="text-stone-700">Expansão através de licenciamento e parcerias, permitindo um crescimento acelerado com menor necessidade de capital intensivo.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-
-      <section className="py-20 bg-stone-100">
-        <div className="container mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-stone-900 mb-6">Seja nosso parceiro</h2>
-          <p className="text-xl text-stone-700 mb-8 max-w-3xl mx-auto">
-            Estamos abertos a conversas com investidores e parceiros estratégicos que desejam fazer parte da revolução da construção civil.
-          </p>
-          <Link
-            href="/contato"
-            className="inline-flex items-center justify-center px-8 py-4 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            Entre em Contato
-          </Link>
         </div>
       </section>
     </div>

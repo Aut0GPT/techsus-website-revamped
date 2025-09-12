@@ -92,5 +92,19 @@
     "contact": "Contato",
     "follow_us": "Siga-nos",
     "copyright": "Todos os direitos reservados."
+  },
+  "contact": {
+    "title": "Contato",
+    "subtitle": "Fale Conosco",
+    "description": "Estamos à disposição para esclarecer dúvidas, agendar reuniões e apresentar nossas soluções inovadoras para a construção civil.",
+    "our_contacts": "Nossos Contatos",
+    "contact_person": "Contato",
+    "location": "Localização",
+    "location_text": "São Paulo - SP, Brasil",
+    "send_message": "Envie uma Mensagem",
+    "name": "Nome",
+    "email": "E-mail",
+    "message": "Mensagem",
+    "send_button": "Enviar Mensagem"
   }
 }

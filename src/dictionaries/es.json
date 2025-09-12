@@ -92,5 +92,19 @@
     "contact": "Contacto",
     "follow_us": "Síguenos",
     "copyright": "Todos los derechos reservados."
+  },
+  "contact": {
+    "title": "Contacto",
+    "subtitle": "Contáctanos",
+    "description": "Estamos disponibles para aclarar dudas, programar reuniones y presentar nuestras soluciones innovadoras para la construcción civil.",
+    "our_contacts": "Nuestros Contactos",
+    "contact_person": "Contacto",
+    "location": "Ubicación",
+    "location_text": "São Paulo - SP, Brasil",
+    "send_message": "Enviar un Mensaje",
+    "name": "Nombre",
+    "email": "Email",
+    "message": "Mensaje",
+    "send_button": "Enviar Mensaje"
   }
 }

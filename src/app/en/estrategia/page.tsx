@@ -1,134 +1,21 @@
 import PageHeader from "@/components/PageHeader";
-import Image from "next/image";
-import { Target, ShieldCheck, Globe, Users, BarChart, Factory, Building2, Recycle, CloudSun } from "lucide-react";
+import { getDictionary } from "@/lib/dictionaries";
 
-export default function Estrategia() {
+export default async function PageEn() {
+  const dict = await getDictionary('en');
+
   return (
     <div className="min-h-screen bg-stone-50">
-      <PageHeader 
-        title="Nossa Estratégia"
+      <PageHeader
+        title="Coming Soon"
       />
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Visão de Futuro</h2>
-            <p className="text-lg text-stone-700 max-w-3xl mx-auto">
-              Nossa estratégia é liderar a transformação global da construção civil, iniciando no Brasil e expandindo para mercados internacionais, tornando a construção mais eficiente, sustentável e alinhada às demandas do século 21.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <Image 
-                src="/images/imagenscomdescricao/WhatsApp Image 2025-09-10 at 11.09.01_d3d5abe4.jpg"
-                alt="Mapa estratégico de expansão industrial - iniciando em São Paulo com visão global"
-                width={600}
-                height={450}
-                className="rounded-lg shadow-2xl"
-              />
-            </div>
-            <div>
-              <div className="flex items-center mb-4">
-                <Target className="h-10 w-10 text-orange-600" />
-                <h3 className="text-2xl font-bold text-stone-900 ml-4">Expansão e Escalabilidade</h3>
-              </div>
-              <p className="text-lg text-stone-700 leading-relaxed mb-6">
-                Planejamos expandir nossa capacidade produtiva através de uma rede global de fábricas estrategicamente localizadas, operando em um modelo de licenciamento e parceria. Iniciando no Brasil, nossa estratégia contempla expansão para mercados internacionais, aproveitando nossas patentes nos EUA e China para atender projetos globalmente com agilidade e custos logísticos otimizados.
-              </p>
-              <div className="flex items-center mb-4">
-                <Users className="h-10 w-10 text-orange-600" />
-                <h3 className="text-2xl font-bold text-stone-900 ml-4">Parcerias Estratégicas</h3>
-              </div>
-              <p className="text-lg text-stone-700 leading-relaxed">
-                Acreditamos no poder da colaboração internacional. Buscamos parcerias com construtoras, incorporadoras, governos e instituições de pesquisa nos mercados brasileiro e internacional para acelerar a adoção global da construção industrializada.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-stone-100">
-        <div className="container mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">Compromisso ESG e Alinhamento com os ODS da ONU</h2>
-            <p className="text-lg text-stone-700 max-w-4xl mx-auto">
-              Na vanguarda da Revolução Industrial 4.0, nosso modelo de negócio evolui em total consonância com os Objetivos de Desenvolvimento Sustentável (ODS), gerando impacto positivo e atendendo à agenda ESG.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <Factory className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-stone-900">ODS 9</h3>
-              <p className="text-stone-600 mt-2 font-semibold">Indústria, Inovação e Infraestrutura</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <Building2 className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-stone-900">ODS 11</h3>
-              <p className="text-stone-600 mt-2 font-semibold">Cidades e Comunidades Sustentáveis</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <Recycle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-stone-900">ODS 12</h3>
-              <p className="text-stone-600 mt-2 font-semibold">Consumo e Produção Responsáveis</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <CloudSun className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-stone-900">ODS 13</h3>
-              <p className="text-stone-600 mt-2 font-semibold">Ação Contra a Mudança Global do Clima</p>
-            </div>
-          </div>
           <div className="text-center">
-            <p className="text-lg text-stone-700 max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-              Além dos benefícios econômicos e de escala, nosso método construtivo atende à agenda ESG, pois promove uma substancial economia de recursos naturais e a consequente diminuição de atividades poluentes.
+            <h2 className="text-3xl font-bold text-stone-900 mb-6">Coming Soon</h2>
+            <p className="text-lg text-stone-700 max-w-3xl mx-auto">
+              This page is under construction. Please visit again soon.
             </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="lg:order-2">
-              <h2 className="text-3xl font-bold text-stone-900 mb-6">Estratégia de expansão – Visão de Curto prazo</h2>
-              <ul className="text-lg text-stone-700 leading-relaxed mb-8 space-y-3">
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
-                  Implantação de no mínimo 10 fábricas nos próximos 5 anos.
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
-                  Desenvolvimento de novos produtos e patentes complementares ao sistema existente.
-                </li>
-              </ul>
-              <h3 className="text-2xl font-bold text-stone-900 mb-4">Vantagens do modelo:</h3>
-              <ul className="text-lg text-stone-700 leading-relaxed space-y-3">
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
-                  Demanda garantida pela produção das fábricas interligadas e estrategicamente posicionadas;
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
-                  Lucratividade equilibrada e sustentável;
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
-                  Economia de escala em insumos e recursos;
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full mt-3 mr-4 flex-shrink-0"></span>
-                  Gestão centralizada de conhecimento e tecnologia.
-                </li>
-              </ul>
-            </div>
-            <div className="lg:order-1">
-              <Image 
-                src="/images/imagenscomdescricao/Fabricas Localizacao.PNG"
-                alt="Mapa de localização de fábricas - Estratégia de expansão global"
-                width={600}
-                height={450}
-                className="rounded-lg shadow-lg border"
-              />
-            </div>
           </div>
         </div>
       </section>
