@@ -1,1 +1,20 @@
-{}
+{
+  "lib/dictionaries.ts -> ../dictionaries/en.json": {
+    "id": 6293,
+    "files": [
+      "static/chunks/6293.5c5f4413e6f0e097.js"
+    ]
+  },
+  "lib/dictionaries.ts -> ../dictionaries/es.json": {
+    "id": 9378,
+    "files": [
+      "static/chunks/4887.72401d1d9228d20c.js"
+    ]
+  },
+  "lib/dictionaries.ts -> ../dictionaries/pt.json": {
+    "id": 8189,
+    "files": [
+      "static/chunks/8189.f6230658aeaa13d6.js"
+    ]
+  }
+}

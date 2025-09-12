@@ -168,7 +168,16 @@
     "onsite_description": "Structure assembled in record time with minimal labor."
   },
   "process": {
-    "title": "Our Construction Process",
+    "title": "Our Process in Action",
+    "subtitle": "From factory to construction site, our method ensures efficiency and precision.",
+    "planning_title": "1. Planning",
+    "planning_description": "Coordination and development of detailed industrial projects.",
+    "manufacturing_title": "2. Manufacturing",
+    "manufacturing_description": "Industrial production in controlled environment with high precision.",
+    "logistics_title": "3. Logistics",
+    "logistics_description": "Safe and optimized transport to the construction site.",
+    "assembly_title": "4. Assembly",
+    "assembly_description": "Structure erected quickly and precisely on site.",
     "main_title": "From Design to Reality: Efficiency in 4 Steps",
     "main_description": "The TECHSUS system revolutionizes civil construction through an optimized process that ensures speed, quality and sustainability.",
     "step1_title": "1. Coordination and development of industrial projects",

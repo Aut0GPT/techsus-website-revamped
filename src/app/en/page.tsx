@@ -75,7 +75,7 @@ export default async function EnglishHome() {
         <div className="container mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-stone-900 mb-4">{dict.process.title}</h2>
-            <p className="text-lg text-stone-700 max-w-3xl mx-auto">{dict.process.subtitle}</p>
+            <p className="text-lg text-stone-700 max-w-3xl mx-auto">{dict.process.main_description}</p>
             <div className="w-20 h-1 bg-orange-600 mx-auto mt-4"></div>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">

@@ -168,7 +168,16 @@
     "onsite_description": "Estrutura montada em tempo recorde com mínimo de mão de obra."
   },
   "process": {
-    "title": "Nosso Processo Construtivo",
+    "title": "Nosso Processo em Ação",
+    "subtitle": "Da fábrica ao canteiro de obras, nosso método garante eficiência e precisão.",
+    "planning_title": "1. Planejamento",
+    "planning_description": "Compatibilização e desenvolvimento de projetos industriais detalhados.",
+    "manufacturing_title": "2. Fabricação",
+    "manufacturing_description": "Produção industrial em ambiente controlado com alta precisão.",
+    "logistics_title": "3. Logística",
+    "logistics_description": "Transporte seguro e otimizado para o canteiro de obras.",
+    "assembly_title": "4. Montagem",
+    "assembly_description": "Estrutura erguida com rapidez e precisão no local.",
     "main_title": "Do Projeto à Realidade: Eficiência em 4 Etapas",
     "main_description": "O sistema TECHSUS revoluciona a construção civil através de um processo otimizado que garante velocidade, qualidade e sustentabilidade.",
     "step1_title": "1. Compatibilização e o desenvolvimento de projetos industriais",
