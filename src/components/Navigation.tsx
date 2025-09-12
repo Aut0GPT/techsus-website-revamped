@@ -82,29 +82,29 @@ export default function Navigation({ locale, dict }: NavigationProps) {
 
   const switchLanguage = (newLocale: string) => {
     const currentPathname = window.location.pathname;
+    let cleanPath = currentPathname;
 
-    if (newLocale === 'pt') {
-      // Portuguese goes to root, remove any locale prefix
-      if (currentPathname.startsWith('/en/')) {
-        router.push(currentPathname.replace('/en', ''));
-      } else if (currentPathname.startsWith('/es/')) {
-        router.push(currentPathname.replace('/es', ''));
-      } else {
-        router.push(currentPathname);
-      }
-    } else {
-      // English/Spanish get prefixed
-      let newPath = currentPathname;
-      if (currentPathname.startsWith('/en/')) {
-        newPath = currentPathname.replace('/en', `/${newLocale}`);
-      } else if (currentPathname.startsWith('/es/')) {
-        newPath = currentPathname.replace('/es', `/${newLocale}`);
-      } else {
-        newPath = `/${newLocale}${currentPathname}`;
-      }
-      router.push(newPath);
+    // Remove current locale prefix to get clean path
+    if (currentPathname.startsWith('/en/')) {
+      cleanPath = currentPathname.substring(3); // Remove '/en'
+    } else if (currentPathname.startsWith('/es/')) {
+      cleanPath = currentPathname.substring(3); // Remove '/es'
     }
 
+    // Handle exact /en or /es paths
+    if (currentPathname === '/en' || currentPathname === '/es') {
+      cleanPath = '/';
+    }
+
+    // Build new path
+    let newPath;
+    if (newLocale === 'pt') {
+      newPath = cleanPath || '/';
+    } else {
+      newPath = `/${newLocale}${cleanPath}`;
+    }
+
+    router.push(newPath);
     setIsLangOpen(false);
   };
 
