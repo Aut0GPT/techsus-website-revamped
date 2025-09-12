@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "title": "TECHSUS - Construcción Industrializada Sustentable",
+    "description": "Sistema constructivo industrializado que revoluciona la construcción civil con sustentabilidad, eficiencia y calidad industrial. Paneles de concreto autoportantes con tecnología patentada."
+  },
+  "navigation": {
+    "home": "Inicio",
+    "about": "Quiénes Somos",
+    "products": "Productos",
+    "system": "Sistema",
+    "process": "Proceso",
+    "strategy": "Estrategia",
+    "partnerships": "Asociaciones",
+    "market": "Mercado",
+    "investors": "Inversores",
+    "live_cameras": "Cámaras en Vivo",
+    "contact": "Contacto"
+  },
+  "hero": {
+    "title": "Construcción Industrializada con Tecnología Sustentable",
+    "subtitle": "Innovación y eficiencia para la construcción civil moderna, del proyecto a la entrega.",
+    "cta": "Contáctanos"
+  },
+  "introduction": {
+    "title": "Bienvenido a TECHSUS",
+    "subtitle": "Industrializamos paredes y losas de concreto para ejecutar grandes volúmenes de edificaciones en tiempo reducido, con desperdicio cero y mano de obra calificada.",
+    "speed_title": "Velocidad",
+    "speed_description": "Reducción de hasta 40% en el tiempo total de obra.",
+    "sustainability_title": "Sustentabilidad",
+    "sustainability_description": "Ahorro de recursos naturales y cero desperdicio.",
+    "quality_title": "Calidad Superior",
+    "quality_description": "Control industrial que elimina patologías y mantenimientos."
+  },
+  "process": {
+    "title": "Nuestro Proceso en Acción",
+    "subtitle": "De la fábrica al sitio de construcción, nuestro método garantiza eficiencia y precisión.",
+    "planning_title": "1. Planificación",
+    "planning_description": "Compatibilización y desarrollo de proyectos industriales detallados.",
+    "manufacturing_title": "2. Fabricación",
+    "manufacturing_description": "Producción industrial en ambiente controlado con alta precisión.",
+    "logistics_title": "3. Logística",
+    "logistics_description": "Transporte seguro y optimizado al sitio de construcción.",
+    "assembly_title": "4. Montaje",
+    "assembly_description": "Estructura erigida con rapidez y precisión en el lugar."
+  },
+  "case_studies": {
+    "title": "Casos de Éxito y Resultados Comprobados",
+    "subtitle": "Nuestros proyectos demuestran consistentemente una reducción del 40% en el tiempo de construcción, cero desperdicio de materiales y calidad superior comprobada.",
+    "metrics": {
+      "time_reduction": "Reducción de Tiempo",
+      "waste": "Desperdicio de Material",
+      "quality_control": "Control de Calidad",
+      "projects": "Proyectos Entregados"
+    },
+    "prototype_title": "Casa Prototipo - São Simão/SP",
+    "prototype_description": "Proyecto piloto entregado en Febrero de 2025 demostrando nuestra capacidad de ejecución con calidad superior y plazos acelerados.",
+    "prototype_area": "Área Construida",
+    "prototype_time": "Tiempo Total",
+    "prototype_testimonial": "La casa quedó exactamente como la planeamos, con acabado perfecto y fue entregada mucho más rápido de lo que esperábamos.",
+    "building_title": "Edificio T+3 - Rio Claro/SP",
+    "building_description": "Primer proyecto vertical demostrando la aplicación de la tecnología en construcciones de múltiples pisos con eficiencia estructural.",
+    "building_area": "Área Total",
+    "building_units": "Unidades",
+    "building_result": "Resultado: Estructura completa montada en 45% menos tiempo que construcción tradicional.",
+    "varzea_title": "Casa - Várzea Paulista/SP",
+    "varzea_description": "Residencia unifamiliar demostrando versatilidad arquitectónica del sistema.",
+    "duque_title": "Edificio T+3 - Duque de Caxias/RJ",
+    "duque_description": "Expansión regional demostrando escalabilidad del sistema constructivo.",
+    "premium_finish": "Acabado Premium",
+    "deadline_met": "Plazo Cumplido",
+    "optimized_logistics": "Logística Optimizada",
+    "certified_quality": "Calidad Certificada"
+  },
+  "technology": {
+    "title": "Tecnología Patentada y Comprobada",
+    "description": "Nuestro sistema constructivo posee protección intelectual en Brasil, EE.UU. y China, además de estar validado por rigurosas pruebas en laboratorios acreditados como el IPT.",
+    "certification_text": "Las certificaciones técnicas atestiguan la conformidad normativa y la calidad superior de nuestro proceso industrializado, garantizando seguridad y durabilidad."
+  },
+  "cta": {
+    "title": "Transforma tu Construcción con TECHSUS",
+    "subtitle": "Contáctanos y descubre cómo nuestra tecnología puede acelerar tus proyectos con más calidad y sustentabilidad.",
+    "button": "Solicitar una Propuesta"
+  },
+  "modal": {
+    "close": "Cerrar modal"
+  },
+  "footer": {
+    "company_description": "Construcción industrializada con tecnología sustentable y altamente escalable.",
+    "quick_links": "Enlaces Rápidos",
+    "company": "Empresa",
+    "system": "Sistema",
+    "contact": "Contacto",
+    "follow_us": "Síguenos",
+    "copyright": "Todos los derechos reservados."
+  }
+}

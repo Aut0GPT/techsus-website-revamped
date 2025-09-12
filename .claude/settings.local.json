@@ -20,7 +20,8 @@
       "WebFetch(domain:ai.google.dev)",
       "WebFetch(domain:developers.google.com)",
       "Bash(find:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }
