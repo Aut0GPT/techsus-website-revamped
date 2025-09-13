@@ -5,10 +5,17 @@ import PageHeader from "@/components/PageHeader";
 import Image from "next/image";
 import { getDictionary } from "@/lib/dictionaries";
 
+const cameras = [
+  { id: "CAM-01", location: "Línea de Producción", image: "/images/imagenscomdescricao/linha-de-producao-automatizada-paineis-concreto.png" },
+  { id: "CAM-02", location: "Montaje de Panel", image: "/images/imagenscomdescricao/guindaste-icando-painel-de-concreto-na-fundacao.png" },
+  { id: "CAM-03", location: "Sitio de Construcción", image: "/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png" },
+  { id: "CAM-04", location: "Patio de la Fábrica", image: "/images/imagenscomdescricao/foto-vintage-paineis-de-concreto-acabados-empilhados.png" },
+];
+
 export default function LiveCamerasEs() {
+  const [dict, setDict] = useState<any>(null);
   const [time, setTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
-  const [dict, setDict] = useState<any>(null);
 
   useEffect(() => {
     getDictionary('es').then(setDict);
@@ -25,29 +32,6 @@ export default function LiveCamerasEs() {
     );
   }
 
-  const cameras = [
-    {
-      id: "CAM-01",
-      location: dict.live_cameras.production_line_location,
-      image: "/images/imagenscomdescricao/linha-de-producao-automatizada-paineis-concreto.png"
-    },
-    {
-      id: "CAM-02",
-      location: dict.live_cameras.panel_assembly_location,
-      image: "/images/imagenscomdescricao/guindaste-icando-painel-de-concreto-na-fundacao.png"
-    },
-    {
-      id: "CAM-03",
-      location: dict.live_cameras.construction_site_location,
-      image: "/images/imagenscomdescricao/trabalhadores-montando-casa-de-paineis-de-concreto.png"
-    },
-    {
-      id: "CAM-04",
-      location: dict.live_cameras.factory_yard_location,
-      image: "/images/imagenscomdescricao/foto-vintage-paineis-de-concreto-acabados-empilhados.png"
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-stone-100">
       <PageHeader
@@ -56,9 +40,9 @@ export default function LiveCamerasEs() {
       <section className="py-20">
         <div className="container mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">{dict.live_cameras.watch_operations_title}</h2>
+            <h2 className="text-3xl font-bold text-stone-900 mb-4">{dict.live_cameras.main_title}</h2>
             <p className="text-lg text-stone-700 max-w-3xl mx-auto">
-              {dict.live_cameras.watch_operations_description}
+              {dict.live_cameras.main_description}
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -78,7 +62,7 @@ export default function LiveCamerasEs() {
                   </div>
                   <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold p-2 rounded-md flex items-center">
                     <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
-                    {dict.live_cameras.live_indicator}
+                    EN VIVO
                   </div>
                   <div className="absolute bottom-3 right-3 bg-black/60 text-white text-sm p-2 rounded-md">
                     <p className="font-mono">

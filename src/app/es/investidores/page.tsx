@@ -83,7 +83,7 @@ export default function InvestidoresEs() {
             {dict.investors.be_our_partner_description}
           </p>
           <Link
-            href="/contato"
+            href="/es/contato"
             className="inline-flex items-center justify-center px-8 py-4 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
           >
             {dict.investors.contact_button}
