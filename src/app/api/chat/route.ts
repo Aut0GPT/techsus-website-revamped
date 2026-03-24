@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, convertToModelMessages, UIMessage, tool, stepCountIs } from 'ai';
+import { streamText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
@@ -45,11 +45,60 @@ Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 - SEMPRE inclua a URL da imagem gerada como markdown ![desc](url) na sua resposta
 - Sempre responda de forma útil e completa`;
 
+const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
+    const coreMessages: any[] = [];
+    for (const message of uiMessages) {
+        if (message.role === 'user') {
+            const content: any[] = [{ type: 'text', text: message.content }];
+            if (message.experimental_attachments) {
+                for (const attachment of message.experimental_attachments) {
+                    if (attachment.url.startsWith('data:')) {
+                        content.push({
+                            type: 'image',
+                            image: Buffer.from(attachment.url.split(',')[1], 'base64'),
+                        });
+                    } else if (attachment.url.startsWith('http')) {
+                        content.push({ type: 'image', image: new URL(attachment.url) });
+                    }
+                }
+            }
+            coreMessages.push({ role: 'user', content });
+        } else if (message.role === 'assistant') {
+            if (message.toolInvocations && message.toolInvocations.length > 0) {
+                coreMessages.push({
+                    role: 'assistant',
+                    content: message.toolInvocations.map((t: any) => ({
+                        type: 'tool-call',
+                        toolCallId: t.toolCallId,
+                        toolName: t.toolName,
+                        args: t.args
+                    })) as any
+                });
+                const results = message.toolInvocations.filter((t: any) => 'result' in t);
+                if (results.length > 0) {
+                    coreMessages.push({
+                        role: 'tool',
+                        content: results.map((t: any) => ({
+                            type: 'tool-result',
+                            toolCallId: t.toolCallId,
+                            toolName: t.toolName,
+                            result: t.result
+                        })) as any
+                    });
+                }
+            } else {
+                coreMessages.push({ role: 'assistant', content: message.content });
+            }
+        }
+    }
+    return coreMessages;
+};
+
 export async function POST(req: Request) {
     try {
         const url = new URL(req.url);
         const modelContext = url.searchParams.get('model') || 'gemini';
-        const { messages }: { messages: UIMessage[] } = await req.json();
+        const { messages }: { messages: any[] } = await req.json();
 
         const customOpenai = createOpenAI({
             apiKey: process.env.openai_key || '',
@@ -60,7 +109,7 @@ export async function POST(req: Request) {
         const result = streamText({
             model: aiModel,
             system: ZENINHO_SYSTEM_PROMPT,
-            messages: await convertToModelMessages(messages),
+            messages: customConvertToCoreMessages(messages),
             tools: {
                 searchDocuments: tool({
                     description: 'Busca documentos relevantes na base de conhecimento da TECHSUS. Use quando o usuário perguntar sobre documentos, processos, especificações técnicas ou qualquer informação que possa estar nos documentos da empresa.',
