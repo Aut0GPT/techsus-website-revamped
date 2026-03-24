@@ -147,8 +147,9 @@ export default function ZeninhoChat() {
     }, [isListening]);
 
     const readAloud = (text: string) => {
+        if (!soundEnabled) return;
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Stop any ongoing speech
+            window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'pt-BR';
             utterance.rate = 1.0;
@@ -158,6 +159,10 @@ export default function ZeninhoChat() {
             alert('Seu navegador não suporta leitura em voz alta.');
         }
     };
+
+    // Derived theme helpers
+    const dm = darkMode;
+    const fontSizeClass = fontSize === 'small' ? 'text-xs' : fontSize === 'large' ? 'text-base' : 'text-sm';
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -193,10 +198,10 @@ export default function ZeninhoChat() {
 
     return (
         <>
-            <div className="flex h-[calc(100vh-0px)] bg-stone-950">
+            <div className={`flex h-[calc(100vh-0px)] transition-colors duration-300 ${dm ? 'bg-stone-950' : 'bg-gray-100'}`}>
                 {/* Sidebar */}
-                <div className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-40 w-72 h-full bg-stone-900 border-r border-stone-800 transition-transform duration-300 flex flex-col`}>
-                    <div className="p-4 border-b border-stone-800 flex items-center justify-center">
+                <div className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-40 w-72 h-full transition-colors duration-300 ${dm ? 'bg-stone-900 border-stone-800' : 'bg-white border-gray-200'} border-r transition-transform duration-300 flex flex-col`}>
+                    <div className={`p-4 border-b ${dm ? 'border-stone-800' : 'border-gray-200'} flex items-center justify-center`}>
                         <Image
                             src="/images/imagenscomdescricao/logo-techsus.png"
                             alt="TECHSUS"
@@ -374,16 +379,14 @@ export default function ZeninhoChat() {
                 </div>
 
                 {/* Sidebar overlay on mobile */}
-                {
-                    showSidebar && (
-                        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setShowSidebar(false)} />
-                    )
-                }
+                {showSidebar && (
+                    <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setShowSidebar(false)} />
+                )}
 
                 {/* Main Chat Area */}
                 <div className="flex-1 flex flex-col min-w-0">
                     {/* Chat Header */}
-                    <div className="h-14 border-b border-stone-800 bg-stone-900/80 backdrop-blur-sm flex items-center px-4 gap-3 shrink-0">
+                    <div className={`h-14 border-b ${dm ? 'border-stone-800 bg-stone-900/80' : 'border-gray-200 bg-white/90'} backdrop-blur-sm flex items-center px-4 gap-3 shrink-0`}>
                         <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden text-stone-400 hover:text-white">
                             <Menu size={20} />
                         </button>
@@ -397,15 +400,15 @@ export default function ZeninhoChat() {
                             />
                         </div>
                         <div>
-                            <h1 className="text-white font-semibold text-sm">Zeninho</h1>
-                            <p className="text-stone-500 text-xs">
+                            <h1 className={`font-semibold text-sm ${dm ? 'text-white' : 'text-gray-900'}`}>Zeninho</h1>
+                            <p className={`text-xs ${dm ? 'text-stone-500' : 'text-gray-400'}`}>
                                 {isLoading ? '✍️ Pensando...' : '🟢 Online'}
                             </p>
                         </div>
                     </div>
 
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+                    <div className={`flex-1 overflow-y-auto px-4 py-6 space-y-6 ${dm ? '' : 'bg-gray-50'}`}>
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-6 max-w-lg mx-auto">
                                 <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-orange-400/20 to-orange-600/20 p-1 shadow-2xl shadow-orange-500/20">
@@ -418,8 +421,8 @@ export default function ZeninhoChat() {
                                     />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-white mb-2">Olá! Eu sou o Zeninho! 👋</h2>
-                                    <p className="text-stone-400 leading-relaxed">
+                                    <h2 className={`text-2xl font-bold mb-2 ${dm ? 'text-white' : 'text-gray-900'}`}>Olá! Eu sou o Zeninho! 👋</h2>
+                                    <p className={`leading-relaxed ${dm ? 'text-stone-400' : 'text-gray-500'}`}>
                                         Sou o assistente inteligente da TECHSUS. Posso ajudar com questões técnicas sobre construção industrializada,
                                         buscar informações nos documentos da empresa, e muito mais! 🍰
                                     </p>
@@ -464,8 +467,10 @@ export default function ZeninhoChat() {
                                 <div
                                     className={`max-w-[80%] lg:max-w-[65%] rounded-2xl px-4 py-3 ${message.role === 'user'
                                         ? 'bg-orange-600 text-white rounded-br-md'
-                                        : 'bg-stone-800/80 text-stone-100 rounded-bl-md border border-stone-700/50'
-                                        }`}
+                                        : dm
+                                            ? 'bg-stone-800/80 text-stone-100 rounded-bl-md border border-stone-700/50'
+                                            : 'bg-white text-gray-800 rounded-bl-md border border-gray-200 shadow-sm'
+                                        } ${fontSizeClass}`}
                                 >
                                     {message.parts.map((part, index) => {
                                         if (part.type === 'text') {
@@ -671,7 +676,7 @@ export default function ZeninhoChat() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="border-t border-stone-800 bg-stone-900/80 backdrop-blur-sm p-4">
+                    <div className={`border-t ${dm ? 'border-stone-800 bg-stone-900/80' : 'border-gray-200 bg-white/90'} backdrop-blur-sm p-4`}>
                         <div className="max-w-4xl mx-auto">
                             {/* Creation Action Chips */}
                             {showActions && (
@@ -780,7 +785,7 @@ export default function ZeninhoChat() {
                                         disabled={isLoading}
                                         placeholder={chatFiles ? 'Descreva o que quer saber sobre o arquivo...' : 'Escreva sua mensagem aqui...'}
                                         rows={1}
-                                        className="w-full resize-none overflow-hidden rounded-xl bg-stone-800 border border-stone-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 text-white placeholder-stone-400 px-4 py-3 pr-12 text-base outline-none transition-colors shadow-inner"
+                                        className={`w-full resize-none overflow-hidden rounded-xl border focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 px-4 py-3 pr-12 text-base outline-none transition-colors shadow-inner ${dm ? 'bg-stone-800 border-stone-700 text-white placeholder-stone-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`}
                                     />
                                 </div>
 
@@ -806,7 +811,7 @@ export default function ZeninhoChat() {
                                     {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                                 </button>
                             </form>
-                            <p className="text-center text-stone-600 text-xs mt-2">
+                            <p className={`text-center text-xs mt-2 ${dm ? 'text-stone-600' : 'text-gray-400'}`}>
                                 Zeninho pode cometer erros. Verifique informações importantes.
                             </p>
                         </div>
