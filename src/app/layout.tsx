@@ -16,9 +16,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body
-        className={`${GeistSans.className} antialiased bg-stone-50 text-stone-900`}
+        className={`${GeistSans.className} antialiased bg-stone-50 text-stone-900 overflow-hidden`}
       >
-        <main className="min-h-screen">
+        <main className="min-h-screen overflow-hidden">
           {children}
         </main>
         <ScrollToTop />
