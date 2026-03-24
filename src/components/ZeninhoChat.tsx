@@ -3,10 +3,10 @@
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation, Paperclip, Mic, MicOff, X } from 'lucide-react';
+import { Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation, Paperclip, Mic, MicOff, X, Volume2, Cpu } from 'lucide-react';
 import Image from 'next/image';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable */
 declare global {
     interface Window {
         SpeechRecognition: any;
@@ -15,9 +15,11 @@ declare global {
 }
 
 export default function ZeninhoChat() {
+    const [aiModel, setAiModel] = useState<'gemini' | 'chatgpt'>('gemini');
+
     const { messages, sendMessage, status } = useChat({
         transport: new DefaultChatTransport({
-            api: '/api/chat',
+            api: `/api/chat?model=${aiModel}`,
         }),
     });
 
@@ -138,6 +140,19 @@ export default function ZeninhoChat() {
         recognition.start();
         setIsListening(true);
     }, [isListening]);
+
+    const readAloud = (text: string) => {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Stop any ongoing speech
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert('Seu navegador não suporta leitura em voz alta.');
+        }
+    };
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -319,9 +334,30 @@ export default function ZeninhoChat() {
                 </div>
 
                 <div className="p-4 border-t border-stone-800">
-                    <div className="flex items-center gap-2 text-stone-500 text-xs">
-                        <Sparkles size={12} />
-                        <span>Gemini 3 Flash · TECHSUS AI</span>
+                    <div className="flex flex-col gap-3">
+                        <div className="text-stone-500 text-xs font-medium uppercase tracking-wider">Mudar Inteligência</div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={() => setAiModel('gemini')}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all ${aiModel === 'gemini'
+                                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                    : 'bg-stone-800 hover:bg-stone-700 text-stone-400 border border-stone-700/50'
+                                    }`}
+                            >
+                                <Sparkles size={14} />
+                                Gemini
+                            </button>
+                            <button
+                                onClick={() => setAiModel('chatgpt')}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all ${aiModel === 'chatgpt'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-stone-800 hover:bg-stone-700 text-stone-400 border border-stone-700/50'
+                                    }`}
+                            >
+                                <Cpu size={14} />
+                                ChatGPT
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -475,7 +511,7 @@ export default function ZeninhoChat() {
                                         return (
                                             <div
                                                 key={index}
-                                                className="whitespace-pre-wrap text-sm leading-relaxed [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4"
+                                                className="whitespace-pre-wrap text-base leading-relaxed [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4"
                                             >
                                                 {part.text}
                                             </div>
@@ -499,7 +535,7 @@ export default function ZeninhoChat() {
                                             </div>
                                         );
                                     } else if (part.type === 'tool-invocation' || part.type === 'tool-call' || part.type === 'tool-result' || (typeof part.type === 'string' && part.type.includes('tool'))) {
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        // eslint-disable-next-line
                                         const p = part as any;
                                         const inv = p.toolInvocation || p;
                                         const toolName = inv.toolName || '';
@@ -572,6 +608,19 @@ export default function ZeninhoChat() {
                                                 ))}
                                         </div>
                                     )}
+
+                                {message.role !== 'user' && (
+                                    <div className="mt-2 pt-2 border-t border-stone-700/30 flex justify-end">
+                                        <button
+                                            onClick={() => readAloud(message.parts.filter(p => p.type === 'text').map((p: any) => p.text).join(' '))}
+                                            className="text-stone-400 hover:text-orange-300 flex items-center gap-1.5 text-xs transition-colors"
+                                            title="Ouvir resposta"
+                                        >
+                                            <Volume2 size={14} />
+                                            Ouvir
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             {message.role === 'user' && (
                                 <div className="w-8 h-8 rounded-full bg-stone-700 flex items-center justify-center text-stone-300 text-xs font-bold shrink-0 mt-1">
@@ -716,9 +765,9 @@ export default function ZeninhoChat() {
                                         }
                                     }}
                                     disabled={isLoading}
-                                    placeholder={chatFiles ? 'Descreva o que quer saber sobre o arquivo...' : 'Pergunte algo ao Zeninho...'}
+                                    placeholder={chatFiles ? 'Descreva o que quer saber sobre o arquivo...' : 'Escreva sua mensagem aqui...'}
                                     rows={1}
-                                    className="w-full resize-none rounded-xl bg-stone-800 border border-stone-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 text-white placeholder-stone-500 px-4 py-3 pr-12 text-sm outline-none transition-colors"
+                                    className="w-full resize-none rounded-xl bg-stone-800 border border-stone-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 text-white placeholder-stone-400 px-4 py-3 pr-12 text-base outline-none transition-colors shadow-inner"
                                 />
                             </div>
 

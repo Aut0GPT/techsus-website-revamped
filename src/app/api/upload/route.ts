@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line
 const pdfParse = require('pdf-parse');
 
 export const maxDuration = 120;

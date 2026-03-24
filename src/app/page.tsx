@@ -188,7 +188,7 @@ export default async function Home() {
                   </div>
                 </div>
                 <blockquote className="border-l-4 border-orange-500 pl-4 italic text-stone-700 text-sm">
-                  "{dict.case_studies.prototype_testimonial}"
+                  &quot;{dict.case_studies.prototype_testimonial}&quot;
                 </blockquote>
               </div>
             </div>

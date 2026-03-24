@@ -1,4 +1,5 @@
 import { google } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, convertToModelMessages, UIMessage, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
@@ -46,10 +47,18 @@ Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 
 export async function POST(req: Request) {
     try {
+        const url = new URL(req.url);
+        const modelContext = url.searchParams.get('model') || 'gemini';
         const { messages }: { messages: UIMessage[] } = await req.json();
 
+        const customOpenai = createOpenAI({
+            apiKey: process.env.openai_key || '',
+        });
+
+        const aiModel = modelContext === 'chatgpt' ? customOpenai('gpt-5.4-mini') : google('gemini-3-flash-preview');
+
         const result = streamText({
-            model: google('gemini-3-flash-preview'),
+            model: aiModel,
             system: ZENINHO_SYSTEM_PROMPT,
             messages: await convertToModelMessages(messages),
             tools: {
