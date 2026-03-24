@@ -49,7 +49,10 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     const coreMessages: any[] = [];
     for (const message of uiMessages) {
         if (message.role === 'user') {
-            const content: any[] = [{ type: 'text', text: message.content }];
+            const content: any[] = [];
+            if (message.content) {
+                content.push({ type: 'text', text: message.content });
+            }
             if (message.experimental_attachments) {
                 for (const attachment of message.experimental_attachments) {
                     if (attachment.url.startsWith('data:')) {
@@ -62,18 +65,30 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     }
                 }
             }
-            coreMessages.push({ role: 'user', content });
+            if (content.length > 0) {
+                coreMessages.push({ role: 'user', content });
+            } else {
+                coreMessages.push({ role: 'user', content: '' });
+            }
         } else if (message.role === 'assistant') {
             if (message.toolInvocations && message.toolInvocations.length > 0) {
-                coreMessages.push({
-                    role: 'assistant',
-                    content: message.toolInvocations.map((t: any) => ({
+                const assistantContent: any[] = [];
+                if (message.content) {
+                    assistantContent.push({ type: 'text', text: message.content });
+                }
+                for (const t of message.toolInvocations) {
+                    assistantContent.push({
                         type: 'tool-call',
                         toolCallId: t.toolCallId,
                         toolName: t.toolName,
                         args: t.args
-                    })) as any
+                    });
+                }
+                coreMessages.push({
+                    role: 'assistant',
+                    content: assistantContent
                 });
+
                 const results = message.toolInvocations.filter((t: any) => 'result' in t);
                 if (results.length > 0) {
                     coreMessages.push({
@@ -83,12 +98,14 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                             toolCallId: t.toolCallId,
                             toolName: t.toolName,
                             result: t.result
-                        })) as any
+                        }))
                     });
                 }
             } else {
-                coreMessages.push({ role: 'assistant', content: message.content });
+                coreMessages.push({ role: 'assistant', content: message.content || '' });
             }
+        } else if (message.role === 'system') {
+            coreMessages.push({ role: 'system', content: message.content || '' });
         }
     }
     return coreMessages;
