@@ -111,7 +111,72 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     return coreMessages;
 };
 
+// ─── Rich logger ────────────────────────────────────────────────────────────
+const sep = (char = '─', len = 72) => char.repeat(len);
+
+function logRequest(modelId: string, messages: any[]) {
+    const ts = new Date().toISOString();
+    console.log('\n' + sep('═'));
+    console.log(`  🤖 ZENINHO REQUEST  │  ${ts}`);
+    console.log(`  Model : ${modelId}`);
+    console.log(`  Thread: ${messages.length} message(s) in context`);
+    console.log(sep());
+    messages.forEach((m, i) => {
+        const role = m.role.toUpperCase().padEnd(9);
+        let preview = '';
+        if (typeof m.content === 'string') {
+            preview = m.content.slice(0, 120);
+        } else if (Array.isArray(m.content)) {
+            const textPart = m.content.find((p: any) => p.type === 'text');
+            const imgParts = m.content.filter((p: any) => p.type === 'image').length;
+            preview = (textPart?.text ?? '').slice(0, 100);
+            if (imgParts) preview += ` [+${imgParts} image(s)]`;
+        }
+        if (preview.length > 110) preview = preview.slice(0, 110) + '…';
+        console.log(`  [${String(i + 1).padStart(2)}] ${role} │ ${preview || '(no text)'}`);
+    });
+    console.log(sep());
+}
+
+function logToolCall(step: number, name: string, args: any) {
+    console.log(`\n  🔧 TOOL CALL  [step ${step}] → ${name}`);
+    const argsStr = JSON.stringify(args, null, 2)
+        .split('\n')
+        .map(l => '       ' + l)
+        .join('\n');
+    console.log(argsStr);
+}
+
+function logToolResult(name: string, result: any) {
+    let summary = '';
+    if (name === 'searchDocuments') {
+        const count = Array.isArray(result?.results) ? result.results.length : 0;
+        summary = `${count} doc chunk(s) found — ${result?.message ?? ''}`;
+    } else if (name === 'listDocuments') {
+        const count = Array.isArray(result?.documents) ? result.documents.length : 0;
+        summary = `${count} document(s) listed`;
+    } else if (name === 'generateImage') {
+        summary = result?.success
+            ? `✅ Image generated → ${(result.imageUrl ?? '').slice(0, 80)}…`
+            : `❌ Failed — ${result?.message}`;
+    } else {
+        summary = JSON.stringify(result).slice(0, 120);
+    }
+    console.log(`  ✅ TOOL RESULT ← ${name}: ${summary}`);
+}
+
+function logFinish(usage: any, steps: number, ms: number) {
+    console.log(sep());
+    console.log(`  ⏱  Finished in   ${ms} ms  │  ${steps} step(s)`);
+    if (usage) {
+        console.log(`  📊 Tokens       prompt=${usage.promptTokens ?? '?'}  completion=${usage.completionTokens ?? '?'}  total=${usage.totalTokens ?? '?'}`);
+    }
+    console.log(sep('═') + '\n');
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export async function POST(req: Request) {
+    const t0 = Date.now();
     try {
         const url = new URL(req.url);
         const modelContext = url.searchParams.get('model') || 'gemini';
@@ -121,12 +186,18 @@ export async function POST(req: Request) {
             apiKey: process.env.openai_key || '',
         });
 
-        const aiModel = modelContext === 'chatgpt' ? customOpenai('gpt-5.4-mini') : google('gemini-3-flash-preview');
+        const modelId = modelContext === 'chatgpt' ? 'gpt-5.4-mini' : 'gemini-3-flash-preview';
+        const aiModel = modelContext === 'chatgpt' ? customOpenai(modelId) : google(modelId);
+
+        const coreMessages = customConvertToCoreMessages(messages);
+        logRequest(modelId, coreMessages);
+
+        let stepCount = 0;
 
         const result = streamText({
             model: aiModel,
             system: ZENINHO_SYSTEM_PROMPT,
-            messages: customConvertToCoreMessages(messages),
+            messages: coreMessages,
             tools: {
                 searchDocuments: tool({
                     description: 'Busca documentos relevantes na base de conhecimento da TECHSUS. Use quando o usuário perguntar sobre documentos, processos, especificações técnicas ou qualquer informação que possa estar nos documentos da empresa.',
@@ -134,6 +205,8 @@ export async function POST(req: Request) {
                         query: z.string().describe('A consulta de busca para encontrar documentos relevantes'),
                     }),
                     execute: async ({ query }) => {
+                        stepCount++;
+                        logToolCall(stepCount, 'searchDocuments', { query });
                         try {
                             const embeddingResponse = await fetch(
                                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
@@ -149,14 +222,18 @@ export async function POST(req: Request) {
                             );
 
                             if (!embeddingResponse.ok) {
-                                return { results: [] as string[], message: 'Não consegui buscar nos documentos no momento.' };
+                                const r = { results: [] as string[], message: 'Não consegui buscar nos documentos no momento.' };
+                                logToolResult('searchDocuments', r);
+                                return r;
                             }
 
                             const embeddingData = await embeddingResponse.json();
                             const queryEmbedding = embeddingData.embedding?.values;
 
                             if (!queryEmbedding) {
-                                return { results: [] as string[], message: 'Não consegui processar a busca.' };
+                                const r = { results: [] as string[], message: 'Não consegui processar a busca.' };
+                                logToolResult('searchDocuments', r);
+                                return r;
                             }
 
                             const { data, error } = await supabase.rpc('match_documents', {
@@ -166,18 +243,24 @@ export async function POST(req: Request) {
                             });
 
                             if (error || !data || data.length === 0) {
-                                return { results: [] as string[], message: 'Nenhum documento relevante encontrado.' };
+                                const r = { results: [] as string[], message: 'Nenhum documento relevante encontrado.' };
+                                logToolResult('searchDocuments', r);
+                                return r;
                             }
 
-                            return {
+                            const r = {
                                 results: data.map((doc: { content: string; similarity: number }) => ({
                                     content: doc.content,
                                     similarity: doc.similarity,
                                 })),
                                 message: `Encontrei ${data.length} trecho(s) relevante(s).`,
                             };
+                            logToolResult('searchDocuments', r);
+                            return r;
                         } catch {
-                            return { results: [] as string[], message: 'Erro ao buscar documentos.' };
+                            const r = { results: [] as string[], message: 'Erro ao buscar documentos.' };
+                            logToolResult('searchDocuments', r);
+                            return r;
                         }
                     },
                 }),
@@ -185,6 +268,8 @@ export async function POST(req: Request) {
                     description: 'Lista todos os documentos disponíveis na base de conhecimento da TECHSUS.',
                     inputSchema: z.object({}),
                     execute: async () => {
+                        stepCount++;
+                        logToolCall(stepCount, 'listDocuments', {});
                         try {
                             const { data, error } = await supabase
                                 .from('documents')
@@ -192,18 +277,24 @@ export async function POST(req: Request) {
                                 .order('created_at', { ascending: false });
 
                             if (error || !data) {
-                                return { documents: [] as string[], message: 'Nenhum documento encontrado.' };
+                                const r = { documents: [] as string[], message: 'Nenhum documento encontrado.' };
+                                logToolResult('listDocuments', r);
+                                return r;
                             }
 
-                            return {
+                            const r = {
                                 documents: data.map((doc: { title: string; created_at: string }) => ({
                                     title: doc.title,
                                     uploadedAt: doc.created_at,
                                 })),
                                 message: `${data.length} documento(s) na base de conhecimento.`,
                             };
+                            logToolResult('listDocuments', r);
+                            return r;
                         } catch {
-                            return { documents: [] as string[], message: 'Erro ao listar documentos.' };
+                            const r = { documents: [] as string[], message: 'Erro ao listar documentos.' };
+                            logToolResult('listDocuments', r);
+                            return r;
                         }
                     },
                 }),
@@ -224,28 +315,22 @@ export async function POST(req: Request) {
                             ),
                     }),
                     execute: async ({ prompt, aspectRatio = '16:9' }) => {
+                        stepCount++;
+                        logToolCall(stepCount, 'generateImage', { prompt: prompt.slice(0, 100), aspectRatio });
                         try {
-                            console.log('[generateImage] Tool called with prompt:', prompt.substring(0, 80));
-                            console.log('[generateImage] Aspect ratio:', aspectRatio);
-
                             const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
                             if (!apiKey) {
-                                console.error('[generateImage] No API key found!');
-                                return { success: false, message: 'Chave de API não configurada.' };
+                                const r = { success: false, message: 'Chave de API não configurada.' };
+                                logToolResult('generateImage', r);
+                                return r;
                             }
 
                             const requestBody = {
-                                contents: [
-                                    {
-                                        parts: [{ text: prompt }],
-                                    },
-                                ],
-                                generationConfig: {
-                                    responseModalities: ['Image', 'Text'],
-                                },
+                                contents: [{ parts: [{ text: prompt }] }],
+                                generationConfig: { responseModalities: ['Image', 'Text'] },
                             };
 
-                            console.log('[generateImage] Calling Gemini API...');
+                            console.log('  📡 Calling Gemini image API...');
                             const response = await fetch(
                                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
                                 {
@@ -257,22 +342,20 @@ export async function POST(req: Request) {
 
                             if (!response.ok) {
                                 const errText = await response.text();
-                                console.error('[generateImage] API error:', response.status, errText);
-                                return { success: false, message: `Erro na API: ${response.status}. Tente novamente.` };
+                                console.error('  ❌ Gemini image API error:', response.status, errText.slice(0, 200));
+                                const r = { success: false, message: `Erro na API: ${response.status}. Tente novamente.` };
+                                logToolResult('generateImage', r);
+                                return r;
                             }
 
                             const data = await response.json();
-                            console.log('[generateImage] Response received, parts count:', data.candidates?.[0]?.content?.parts?.length || 0);
-
                             const parts = data.candidates?.[0]?.content?.parts || [];
+                            console.log(`  📦 Response parts: ${parts.length} (${parts.map((p: any) => p.inlineData ? 'image' : 'text').join(', ')})`);
 
                             for (const part of parts) {
                                 if (part.inlineData) {
-                                    console.log('[generateImage] ✅ Image generated! MIME:', part.inlineData.mimeType, 'Size:', part.inlineData.data?.length || 0);
-
-                                    // Upload to Supabase storage bucket
                                     const ext = part.inlineData.mimeType === 'image/png' ? 'png' : 'jpg';
-                                    const fileName = `zeninho_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+                                    const fileName = `zeninho_${Date.now()}.${ext}`;
 
                                     try {
                                         const imageBuffer = Buffer.from(part.inlineData.data, 'base64');
@@ -284,63 +367,57 @@ export async function POST(req: Request) {
                                             });
 
                                         if (uploadError) {
-                                            console.error('[generateImage] Supabase upload error:', uploadError.message);
-                                            // Fall back to base64 if upload fails
-                                            return {
-                                                success: true,
-                                                imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`,
-                                                message: 'Imagem gerada (mas não salva no storage).',
-                                            };
+                                            console.error('  ❌ Supabase upload error:', uploadError.message);
+                                            const r = { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (não salva no storage).' };
+                                            logToolResult('generateImage', r);
+                                            return r;
                                         }
 
                                         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                                             .from('imagensgeradas')
-                                            .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+                                            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
                                         if (signedUrlError || !signedUrlData?.signedUrl) {
-                                            console.error('[generateImage] Signed URL error:', signedUrlError?.message);
-                                            return {
-                                                success: true,
-                                                imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`,
-                                                message: 'Imagem gerada (erro ao gerar URL).',
-                                            };
+                                            const r = { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (erro ao gerar URL).' };
+                                            logToolResult('generateImage', r);
+                                            return r;
                                         }
 
-                                        console.log('[generateImage] ✅ Uploaded to Supabase:', signedUrlData.signedUrl.substring(0, 100));
-
-                                        return {
-                                            success: true,
-                                            imageUrl: signedUrlData.signedUrl,
-                                            message: 'Imagem gerada e salva com sucesso!',
-                                        };
+                                        const r = { success: true, imageUrl: signedUrlData.signedUrl, message: 'Imagem gerada e salva com sucesso!' };
+                                        logToolResult('generateImage', r);
+                                        return r;
                                     } catch (uploadErr) {
-                                        console.error('[generateImage] Upload failed, using base64 fallback:', uploadErr);
-                                        return {
-                                            success: true,
-                                            imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`,
-                                            message: 'Imagem gerada (falha ao salvar no storage).',
-                                        };
+                                        console.error('  ❌ Upload exception:', uploadErr);
+                                        const r = { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (falha no storage).' };
+                                        logToolResult('generateImage', r);
+                                        return r;
                                     }
                                 }
                             }
 
-                            // If only text was returned, log it
                             const textParts = parts.filter((p: { text?: string }) => p.text);
                             if (textParts.length > 0) {
-                                console.log('[generateImage] ⚠️ Only text returned, no image:', textParts[0].text?.substring(0, 100));
+                                console.log('  ⚠️  Only text returned:', textParts[0].text?.slice(0, 100));
                             }
-
-                            return { success: false, message: 'A API retornou texto em vez de imagem. Tente com um prompt diferente.' };
+                            const r = { success: false, message: 'A API retornou texto em vez de imagem.' };
+                            logToolResult('generateImage', r);
+                            return r;
                         } catch (err) {
-                            console.error('[generateImage] Error:', err);
-                            return { success: false, message: 'Erro ao gerar a imagem.' };
+                            console.error('  ❌ generateImage exception:', err);
+                            const r = { success: false, message: 'Erro ao gerar a imagem.' };
+                            logToolResult('generateImage', r);
+                            return r;
                         }
                     },
                 }),
             },
             stopWhen: stepCountIs(10),
+            onFinish({ usage, steps }) {
+                logFinish(usage, steps?.length ?? stepCount, Date.now() - t0);
+            },
             onError({ error }) {
-                console.error('Zeninho stream error:', error);
+                console.error('\n  ❌ ZENINHO STREAM ERROR:', error);
+                console.log(sep('═') + '\n');
             },
         });
 
@@ -348,7 +425,8 @@ export async function POST(req: Request) {
             sendSources: true,
         });
     } catch (error) {
-        console.error('Zeninho API error:', error);
+        console.error('\n  ❌ ZENINHO API ERROR:', error);
+        console.log(sep('═') + '\n');
         return new Response(
             JSON.stringify({ error: 'Erro interno do Zeninho. Tente novamente.' }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -217,14 +217,16 @@ export default function ZeninhoChat() {
                         <button
                             onClick={() => setShowUpload(!showUpload)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 text-sm ${showUpload
-                                ? 'bg-orange-500/10 border border-orange-500/30 text-orange-300'
-                                : 'bg-stone-800/50 hover:bg-stone-800 text-stone-300 hover:text-white border border-transparent'
+                                    ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400'
+                                    : dm
+                                        ? 'bg-stone-800/50 hover:bg-stone-800 text-stone-300 hover:text-white border border-transparent'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 border border-transparent'
                                 }`}
                         >
                             <span className="text-xl shrink-0">🍰</span>
                             <div className="text-left">
                                 <span className="block font-medium">Alimentar o Zeninho</span>
-                                <span className="block text-[10px] text-stone-500">Ensine algo novo pra ele!</span>
+                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Ensine algo novo pra ele!</span>
                             </div>
                         </button>
 
@@ -232,14 +234,16 @@ export default function ZeninhoChat() {
                         <button
                             onClick={() => setShowSettings(!showSettings)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 text-sm ${showSettings
-                                ? 'bg-stone-700/60 border border-stone-600/50 text-stone-200'
-                                : 'bg-stone-800/50 hover:bg-stone-800 text-stone-300 hover:text-white border border-transparent'
+                                    ? dm ? 'bg-stone-700/60 border border-stone-600/50 text-stone-200' : 'bg-gray-200 border border-gray-300 text-gray-800'
+                                    : dm
+                                        ? 'bg-stone-800/50 hover:bg-stone-800 text-stone-300 hover:text-white border border-transparent'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 border border-transparent'
                                 }`}
                         >
                             <Settings size={18} className="shrink-0" />
                             <div className="text-left">
                                 <span className="block font-medium">Configurações</span>
-                                <span className="block text-[10px] text-stone-500">Modelo: {aiModel === 'gemini' ? 'Gemini' : 'ChatGPT'}</span>
+                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Modelo: {aiModel === 'gemini' ? 'Gemini' : 'ChatGPT'}</span>
                             </div>
                         </button>
 
@@ -750,8 +754,10 @@ export default function ZeninhoChat() {
                                     type="button"
                                     onClick={() => setShowActions(!showActions)}
                                     className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${showActions
-                                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                                        : 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-orange-500/30'
+                                            ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                            : dm
+                                                ? 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-orange-500/30'
+                                                : 'bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-300 hover:border-orange-400'
                                         }`}
                                     title="Criar conteúdo visual"
                                 >
@@ -763,8 +769,10 @@ export default function ZeninhoChat() {
                                     type="button"
                                     onClick={() => chatFileInputRef.current?.click()}
                                     className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${chatFiles
-                                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                        : 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-blue-500/30'
+                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                            : dm
+                                                ? 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-blue-500/30'
+                                                : 'bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-300 hover:border-blue-400'
                                         }`}
                                     title="Anexar arquivo ou imagem"
                                 >
@@ -794,8 +802,10 @@ export default function ZeninhoChat() {
                                     type="button"
                                     onClick={toggleVoiceInput}
                                     className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${isListening
-                                        ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
-                                        : 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-orange-500/30'
+                                            ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
+                                            : dm
+                                                ? 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-orange-500/30'
+                                                : 'bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-300 hover:border-orange-400'
                                         }`}
                                     title={isListening ? 'Parar gravação' : 'Falar com Zeninho'}
                                 >
@@ -806,7 +816,7 @@ export default function ZeninhoChat() {
                                 <button
                                     type="submit"
                                     disabled={(!input.trim() && !chatFiles) || isLoading}
-                                    className="shrink-0 w-11 h-11 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:bg-stone-700 disabled:text-stone-500 text-white flex items-center justify-center transition-colors shadow-lg shadow-orange-500/20 disabled:shadow-none"
+                                    className={`shrink-0 w-11 h-11 rounded-xl text-white flex items-center justify-center transition-colors shadow-lg shadow-orange-500/20 disabled:shadow-none bg-orange-600 hover:bg-orange-500 ${dm ? 'disabled:bg-stone-700 disabled:text-stone-500' : 'disabled:bg-gray-200 disabled:text-gray-400'}`}
                                 >
                                     {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                                 </button>
