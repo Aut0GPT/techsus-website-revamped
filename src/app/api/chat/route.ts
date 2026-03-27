@@ -134,7 +134,7 @@ Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 - Se o tool retornar success:false, informe o usuário do erro.
 
 ## Pesquisa na Web
-Quando o usuário pedir informações atuais, notícias, preços, dados de mercado ou qualquer coisa que possa não estar nos documentos, use o tool webSearch para buscar na internet.
+Você tem amplo conhecimento geral atualizado. Para perguntas sobre notícias, preços ou dados da web, use esse conhecimento diretamente. Só chame webSearch se o usuário pedir explicitamente uma pesquisa na web.
 
 ## Instruções
 - Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments
@@ -410,19 +410,20 @@ export async function POST(req: Request) {
                     },
                 }),
 
-                // webSearch tool — only used by ChatGPT (Gemini uses Google Search grounding natively)
+                // webSearch tool — only used by ChatGPT (Gemini uses google.tools.googleSearch natively)
                 webSearch: tool({
                     description: 'Pesquisa informações atuais na internet. Use para notícias, dados de mercado, preços, informações sobre empresas, eventos recentes, ou qualquer coisa não coberta pelos documentos internos.',
                     inputSchema: z.object({
                         query: z.string().describe('Termo de busca em português ou inglês'),
                     }),
                     execute: async ({ query }) => {
-                        // ChatGPT search-preview model handles this internally;
-                        // this execute() is a passthrough hint for logging purposes.
                         console.log(`  🌐 webSearch (ChatGPT tool): "${query}"`);
                         return { query, message: 'Pesquisa delegada ao modelo de busca integrado.' };
                     },
                 }),
+
+                // Google Search — only added for Gemini (provider-native on-demand search)
+                ...(modelContext !== 'chatgpt' ? { googleSearch: google.tools.googleSearch({}) } : {}),
 
                 generateImage: tool({
                     description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
@@ -504,13 +505,12 @@ export async function POST(req: Request) {
                 }),
             },
 
-            // Google Search grounding for Gemini (searches inline, no tool call)
-            providerOptions: modelContext !== 'chatgpt' ? {
-                google: { useSearchGrounding: true },
-            } : undefined,
+            // Gemini uses google.tools.googleSearch() (declared in tools above) —
+            // on-demand Google Search, only called when the model decides it needs it.
+            // This avoids the 20-30s overhead of always-on useSearchGrounding.
 
             onStepFinish({ stepNumber, text, toolCalls, finishReason, usage }) {
-                const toolNames = toolCalls?.map(tc => tc.toolName).join(', ') || 'none';
+                const toolNames = toolCalls?.map(tc => tc?.toolName ?? 'unknown').join(', ') || 'none';
                 console.log(`  📍 Step ${stepNumber} done  │  reason=${finishReason}  │  tools=[${toolNames}]  │  tokens=${usage?.totalTokens ?? '?'}`);
             },
             onFinish({ usage, steps }) {
