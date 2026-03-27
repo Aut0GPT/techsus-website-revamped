@@ -71,25 +71,33 @@ function createRagMiddleware() {
                     ? lastUser.content
                     : (lastUser.content as any[])?.find((p: any) => p.type === 'text')?.text ?? '';
 
-                if (!text.trim() || text.length < 10) return params;
+                if (!text.trim() || text.length < 20) return params;
 
-                // Fetch top 3 relevant chunks silently
-                const { data: chunks } = await hybridSearch(text, 3);
-                if (!chunks || chunks.length === 0) return params;
+                // Fetch top 3 relevant chunks with a 4s timeout
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4000);
+                try {
+                    const { data: chunks } = await hybridSearch(text, 3);
+                    clearTimeout(timer);
+                    if (!chunks || chunks.length === 0) return params;
 
-                const highConfidence = chunks.filter((c: any) => (c.similarity ?? 0) >= 0.65);
-                if (highConfidence.length === 0) return params;
+                    const highConfidence = chunks.filter((c: any) => (c.similarity ?? 0) >= 0.65);
+                    if (highConfidence.length === 0) return params;
 
-                const context = highConfidence
-                    .map((c: any, i: number) => `[Trecho ${i + 1} | Score: ${(c.similarity ?? 0).toFixed(2)}]\n${c.content}`)
-                    .join('\n\n---\n\n');
+                    const context = highConfidence
+                        .map((c: any, i: number) => `[Trecho ${i + 1} | Score: ${(c.similarity ?? 0).toFixed(2)}]\n${c.content}`)
+                        .join('\n\n---\n\n');
 
-                console.log(`  🧠 RAG middleware: injected ${highConfidence.length} chunk(s) into system prompt`);
+                    console.log(`  🧠 RAG middleware: injected ${highConfidence.length} chunk(s) into system prompt`);
 
-                return {
-                    ...params,
-                    system: `${params.system}\n\n## Contexto Automático dos Documentos TECHSUS\n${context}\n\n(Use este contexto para fundamentar sua resposta se relevante.)`,
-                };
+                    return {
+                        ...params,
+                        system: `${params.system}\n\n## Contexto Automático dos Documentos TECHSUS\n${context}\n\n(Use este contexto para fundamentar sua resposta se relevante.)`,
+                    };
+                } catch {
+                    clearTimeout(timer);
+                    return params;
+                }
             } catch {
                 return params; // never break the request
             }
@@ -421,9 +429,6 @@ export async function POST(req: Request) {
                         return { query, message: 'Pesquisa delegada ao modelo de busca integrado.' };
                     },
                 }),
-
-                // Google Search — only added for Gemini (provider-native on-demand search)
-                ...(modelContext !== 'chatgpt' ? { googleSearch: google.tools.googleSearch({}) } : {}),
 
                 generateImage: tool({
                     description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
