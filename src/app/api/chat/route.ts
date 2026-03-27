@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, tool, stepCountIs } from 'ai';
+import { streamText, tool, stepCountIs, wrapLanguageModel } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
@@ -10,6 +10,92 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
+
+// ─── Embed helper (shared between tool + middleware) ─────────────────────────
+async function embedQuery(text: string): Promise<number[] | null> {
+    const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: { parts: [{ text }] },
+                taskType: 'RETRIEVAL_QUERY',
+                outputDimensionality: 768,
+            }),
+        }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.embedding?.values ?? null;
+}
+
+// ─── Hybrid search (vector + full-text, falls back to vector-only) ───────────
+async function hybridSearch(query: string, matchCount = 5) {
+    const embedding = await embedQuery(query);
+    if (!embedding) return { data: null, error: 'embedding failed' };
+
+    // Try hybrid_search first (requires the SQL function to exist)
+    const hybrid = await supabase.rpc('hybrid_search', {
+        query_text: query,
+        query_embedding: embedding,
+        match_count: matchCount,
+    });
+
+    if (!hybrid.error && hybrid.data?.length > 0) {
+        console.log(`  🔍 Hybrid search: ${hybrid.data.length} results`);
+        return { data: hybrid.data, error: null };
+    }
+
+    // Fallback: pure vector search
+    console.log('  🔍 Falling back to vector-only search');
+    const vector = await supabase.rpc('match_documents', {
+        query_embedding: embedding,
+        match_threshold: 0.65,
+        match_count: matchCount,
+    });
+    return vector;
+}
+
+// ─── RAG middleware — auto-injects document context into every request ────────
+function createRagMiddleware() {
+    return {
+        specificationVersion: 'v3' as const,
+        async transformParams({ params }: { params: any }) {
+            try {
+                // Get the last user message text
+                const lastUser = [...(params.messages ?? [])].reverse().find((m: any) => m.role === 'user');
+                if (!lastUser) return params;
+
+                const text = typeof lastUser.content === 'string'
+                    ? lastUser.content
+                    : (lastUser.content as any[])?.find((p: any) => p.type === 'text')?.text ?? '';
+
+                if (!text.trim() || text.length < 10) return params;
+
+                // Fetch top 3 relevant chunks silently
+                const { data: chunks } = await hybridSearch(text, 3);
+                if (!chunks || chunks.length === 0) return params;
+
+                const highConfidence = chunks.filter((c: any) => (c.similarity ?? 0) >= 0.65);
+                if (highConfidence.length === 0) return params;
+
+                const context = highConfidence
+                    .map((c: any, i: number) => `[Trecho ${i + 1} | Score: ${(c.similarity ?? 0).toFixed(2)}]\n${c.content}`)
+                    .join('\n\n---\n\n');
+
+                console.log(`  🧠 RAG middleware: injected ${highConfidence.length} chunk(s) into system prompt`);
+
+                return {
+                    ...params,
+                    system: `${params.system}\n\n## Contexto Automático dos Documentos TECHSUS\n${context}\n\n(Use este contexto para fundamentar sua resposta se relevante.)`,
+                };
+            } catch {
+                return params; // never break the request
+            }
+        },
+    };
+}
 
 const ZENINHO_SYSTEM_PROMPT = `Você é o Zeninho, o assistente de IA amigável e inteligente da TECHSUS.
 
@@ -38,10 +124,13 @@ Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 - Após incluir a imagem em markdown, faça um breve comentário sobre ela.
 - Se o tool retornar success:false, informe o usuário do erro.
 
+## Pesquisa na Web
+Quando o usuário pedir informações atuais, notícias, preços, dados de mercado ou qualquer coisa que possa não estar nos documentos, use o tool webSearch para buscar na internet.
+
 ## Instruções
-- Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments para buscar nos documentos cadastrados
-- Quando o usuário perguntar sobre informações atuais ou da web, responda com base no seu conhecimento
-- Quando o usuário pedir QUALQUER tipo de imagem, gráfico, ilustração ou PowerPoint → CHAME o tool generateImage IMEDIATAMENTE. Não descreva a imagem em texto.
+- Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments
+- Quando o usuário perguntar sobre informações atuais ou da web, use o tool webSearch
+- Quando o usuário pedir QUALQUER tipo de imagem → CHAME generateImage IMEDIATAMENTE
 - SEMPRE inclua a URL da imagem gerada como markdown ![desc](url) na sua resposta
 - Sempre responda de forma útil e completa`;
 
@@ -84,10 +173,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         args: t.args
                     });
                 }
-                coreMessages.push({
-                    role: 'assistant',
-                    content: assistantContent
-                });
+                coreMessages.push({ role: 'assistant', content: assistantContent });
 
                 const results = message.toolInvocations.filter((t: any) => 'result' in t);
                 if (results.length > 0) {
@@ -111,15 +197,14 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     return coreMessages;
 };
 
-// ─── Rich logger ────────────────────────────────────────────────────────────
+// ─── Logger ──────────────────────────────────────────────────────────────────
 const sep = (char = '─', len = 72) => char.repeat(len);
 
 function logRequest(modelId: string, messages: any[]) {
     const ts = new Date().toISOString();
     console.log('\n' + sep('═'));
-    console.log(`  🤖 ZENINHO REQUEST  │  ${ts}`);
-    console.log(`  Model : ${modelId}`);
-    console.log(`  Thread: ${messages.length} message(s) in context`);
+    console.log(`  🤖 ZENINHO  │  ${ts}  │  ${modelId}`);
+    console.log(`  Thread: ${messages.length} message(s)`);
     console.log(sep());
     messages.forEach((m, i) => {
         const role = m.role.toUpperCase().padEnd(9);
@@ -138,42 +223,12 @@ function logRequest(modelId: string, messages: any[]) {
     console.log(sep());
 }
 
-function logToolCall(step: number, name: string, args: any) {
-    console.log(`\n  🔧 TOOL CALL  [step ${step}] → ${name}`);
-    const argsStr = JSON.stringify(args, null, 2)
-        .split('\n')
-        .map(l => '       ' + l)
-        .join('\n');
-    console.log(argsStr);
-}
-
-function logToolResult(name: string, result: any) {
-    let summary = '';
-    if (name === 'searchDocuments') {
-        const count = Array.isArray(result?.results) ? result.results.length : 0;
-        summary = `${count} doc chunk(s) found — ${result?.message ?? ''}`;
-    } else if (name === 'listDocuments') {
-        const count = Array.isArray(result?.documents) ? result.documents.length : 0;
-        summary = `${count} document(s) listed`;
-    } else if (name === 'generateImage') {
-        summary = result?.success
-            ? `✅ Image generated → ${(result.imageUrl ?? '').slice(0, 80)}…`
-            : `❌ Failed — ${result?.message}`;
-    } else {
-        summary = JSON.stringify(result).slice(0, 120);
-    }
-    console.log(`  ✅ TOOL RESULT ← ${name}: ${summary}`);
-}
-
 function logFinish(usage: any, steps: number, ms: number) {
     console.log(sep());
-    console.log(`  ⏱  Finished in   ${ms} ms  │  ${steps} step(s)`);
-    if (usage) {
-        console.log(`  📊 Tokens       prompt=${usage.promptTokens ?? '?'}  completion=${usage.completionTokens ?? '?'}  total=${usage.totalTokens ?? '?'}`);
-    }
+    console.log(`  ⏱  ${ms}ms  │  ${steps} step(s)  │  tokens: prompt=${usage?.promptTokens ?? '?'} completion=${usage?.completionTokens ?? '?'} total=${usage?.totalTokens ?? '?'}`);
     console.log(sep('═') + '\n');
 }
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
     const t0 = Date.now();
@@ -182,94 +237,111 @@ export async function POST(req: Request) {
         const modelContext = url.searchParams.get('model') || 'gemini';
         const { messages }: { messages: any[] } = await req.json();
 
-        const customOpenai = createOpenAI({
-            apiKey: process.env.openai_key || '',
-        });
+        const customOpenai = createOpenAI({ apiKey: process.env.openai_key || '' });
 
-        const modelId = modelContext === 'chatgpt' ? 'gpt-5.4-mini' : 'gemini-3-flash-preview';
-        const aiModel = modelContext === 'chatgpt' ? customOpenai(modelId) : google(modelId);
+        const modelId = modelContext === 'chatgpt' ? 'gpt-4o-mini-search-preview' : 'gemini-2.0-flash';
+        // ChatGPT: use Responses API (has built-in web search)
+        // Gemini: use standard chat completions (search via providerOptions grounding)
+        const baseModel = modelContext === 'chatgpt'
+            ? customOpenai.responses(modelId)
+            : google(modelId);
+
+        // Wrap model with RAG middleware (auto-injects relevant doc context)
+        const aiModel = wrapLanguageModel({
+            model: baseModel,
+            middleware: createRagMiddleware(),
+        });
 
         const coreMessages = customConvertToCoreMessages(messages);
         logRequest(modelId, coreMessages);
-
-        let stepCount = 0;
 
         const result = streamText({
             model: aiModel,
             system: ZENINHO_SYSTEM_PROMPT,
             messages: coreMessages,
+
+            // ── Phase 1 step control ──────────────────────────────────────────
+            stopWhen: stepCountIs(10),
+
+            // On step >= 2 stop offering generateImage to prevent loops
+            // Gemini uses grounding (not webSearch tool), ChatGPT uses webSearch tool
+            prepareStep: async ({ stepNumber }) => {
+                if (stepNumber >= 2) {
+                    // Keep doc search available; ChatGPT also keeps webSearch
+                    return {
+                        activeTools: (modelContext === 'chatgpt'
+                            ? ['searchDocuments', 'listDocuments', 'webSearch']
+                            : ['searchDocuments', 'listDocuments']
+                        ) as Array<'searchDocuments' | 'listDocuments' | 'webSearch' | 'generateImage'>,
+                    };
+                }
+                return undefined;
+            },
+
+            // ── Per-tool lifecycle logging ─────────────────────────────────────────────
+            experimental_onToolCallStart(event: any) {
+                const name: string = event.toolCall?.toolName ?? 'unknown';
+                const argsPreview = String(event.toolCall?.args ?? '{}').slice(0, 120);
+                console.log(`\n  🔧 → ${name}  args: ${argsPreview}`);
+            },
+            experimental_onToolCallFinish(event: any) {
+                const name: string = event.toolCall?.toolName ?? 'unknown';
+                const ms: number = event.durationMs ?? 0;
+                if (!event.success) {
+                    console.error(`  ❌ ← ${name}  FAILED after ${ms}ms:`, event.error);
+                    return;
+                }
+                const output = event.output as any;
+                let summary = '';
+                if (name === 'searchDocuments') {
+                    const count = Array.isArray(output?.results) ? output.results.length : 0;
+                    const scores = (output?.results ?? []).map((r: any) => r.similarity?.toFixed(2)).join(', ');
+                    summary = `${count} chunk(s)  scores: [${scores}]`;
+                } else if (name === 'listDocuments') {
+                    summary = `${output?.documents?.length ?? 0} doc(s)`;
+                } else if (name === 'generateImage') {
+                    summary = output?.success ? `✅ ${String(output.imageUrl ?? '').slice(0, 60)}…` : `❌ ${output?.message}`;
+                } else if (name === 'webSearch') {
+                    summary = `${output?.results?.length ?? 0} web result(s)`;
+                } else {
+                    summary = JSON.stringify(output).slice(0, 100);
+                }
+                console.log(`  ✅ ← ${name}  ${ms}ms  │  ${summary}`);
+            },
+
+            // ── Tools ─────────────────────────────────────────────────────────
             tools: {
                 searchDocuments: tool({
-                    description: 'Busca documentos relevantes na base de conhecimento da TECHSUS. Use quando o usuário perguntar sobre documentos, processos, especificações técnicas ou qualquer informação que possa estar nos documentos da empresa.',
+                    description: 'Busca documentos relevantes na base de conhecimento da TECHSUS usando busca híbrida (semântica + palavras-chave). Use quando o usuário perguntar sobre documentos, processos, especificações técnicas, patentes ou qualquer informação que possa estar nos documentos da empresa.',
                     inputSchema: z.object({
-                        query: z.string().describe('A consulta de busca para encontrar documentos relevantes'),
+                        query: z.string().describe('Consulta em português para buscar nos documentos TECHSUS. Seja específico e use termos técnicos quando relevante.'),
                     }),
+                    strict: true,
                     execute: async ({ query }) => {
-                        stepCount++;
-                        logToolCall(stepCount, 'searchDocuments', { query });
                         try {
-                            const embeddingResponse = await fetch(
-                                `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
-                                {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        content: { parts: [{ text: query }] },
-                                        taskType: 'RETRIEVAL_QUERY',
-                                        outputDimensionality: 768,
-                                    }),
-                                }
-                            );
-
-                            if (!embeddingResponse.ok) {
-                                const r = { results: [] as string[], message: 'Não consegui buscar nos documentos no momento.' };
-                                logToolResult('searchDocuments', r);
-                                return r;
-                            }
-
-                            const embeddingData = await embeddingResponse.json();
-                            const queryEmbedding = embeddingData.embedding?.values;
-
-                            if (!queryEmbedding) {
-                                const r = { results: [] as string[], message: 'Não consegui processar a busca.' };
-                                logToolResult('searchDocuments', r);
-                                return r;
-                            }
-
-                            const { data, error } = await supabase.rpc('match_documents', {
-                                query_embedding: queryEmbedding,
-                                match_threshold: 0.5,
-                                match_count: 5,
-                            });
+                            const { data, error } = await hybridSearch(query, 5);
 
                             if (error || !data || data.length === 0) {
-                                const r = { results: [] as string[], message: 'Nenhum documento relevante encontrado.' };
-                                logToolResult('searchDocuments', r);
-                                return r;
+                                return { results: [] as any[], message: 'Nenhum documento relevante encontrado.' };
                             }
 
-                            const r = {
+                            return {
                                 results: data.map((doc: { content: string; similarity: number }) => ({
                                     content: doc.content,
-                                    similarity: doc.similarity,
+                                    similarity: Number(doc.similarity?.toFixed(3)),
                                 })),
                                 message: `Encontrei ${data.length} trecho(s) relevante(s).`,
                             };
-                            logToolResult('searchDocuments', r);
-                            return r;
                         } catch {
-                            const r = { results: [] as string[], message: 'Erro ao buscar documentos.' };
-                            logToolResult('searchDocuments', r);
-                            return r;
+                            return { results: [] as any[], message: 'Erro ao buscar documentos.' };
                         }
                     },
                 }),
+
                 listDocuments: tool({
                     description: 'Lista todos os documentos disponíveis na base de conhecimento da TECHSUS.',
                     inputSchema: z.object({}),
                     execute: async () => {
-                        stepCount++;
-                        logToolCall(stepCount, 'listDocuments', {});
                         try {
                             const { data, error } = await supabase
                                 .from('documents')
@@ -277,58 +349,48 @@ export async function POST(req: Request) {
                                 .order('created_at', { ascending: false });
 
                             if (error || !data) {
-                                const r = { documents: [] as string[], message: 'Nenhum documento encontrado.' };
-                                logToolResult('listDocuments', r);
-                                return r;
+                                return { documents: [] as any[], message: 'Nenhum documento encontrado.' };
                             }
 
-                            const r = {
+                            return {
                                 documents: data.map((doc: { title: string; created_at: string }) => ({
                                     title: doc.title,
                                     uploadedAt: doc.created_at,
                                 })),
                                 message: `${data.length} documento(s) na base de conhecimento.`,
                             };
-                            logToolResult('listDocuments', r);
-                            return r;
                         } catch {
-                            const r = { documents: [] as string[], message: 'Erro ao listar documentos.' };
-                            logToolResult('listDocuments', r);
-                            return r;
+                            return { documents: [] as any[], message: 'Erro ao listar documentos.' };
                         }
                     },
                 }),
-                generateImage: tool({
-                    description:
-                        'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
+
+                // webSearch tool — only used by ChatGPT (Gemini uses Google Search grounding natively)
+                webSearch: tool({
+                    description: 'Pesquisa informações atuais na internet. Use para notícias, dados de mercado, preços, informações sobre empresas, eventos recentes, ou qualquer coisa não coberta pelos documentos internos.',
                     inputSchema: z.object({
-                        prompt: z
-                            .string()
-                            .describe(
-                                'Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'
-                            ),
-                        aspectRatio: z
-                            .enum(['1:1', '16:9', '9:16', '4:3', '3:4'])
-                            .optional()
-                            .describe(
-                                'Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para fotos quadradas, 9:16 para stories/vertical.'
-                            ),
+                        query: z.string().describe('Termo de busca em português ou inglês'),
+                    }),
+                    execute: async ({ query }) => {
+                        // ChatGPT search-preview model handles this internally;
+                        // this execute() is a passthrough hint for logging purposes.
+                        console.log(`  🌐 webSearch (ChatGPT tool): "${query}"`);
+                        return { query, message: 'Pesquisa delegada ao modelo de busca integrado.' };
+                    },
+                }),
+
+                generateImage: tool({
+                    description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
+                    inputSchema: z.object({
+                        prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
+                        aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para fotos quadradas, 9:16 para stories/vertical.'),
                     }),
                     execute: async ({ prompt, aspectRatio = '16:9' }) => {
-                        stepCount++;
-                        logToolCall(stepCount, 'generateImage', { prompt: prompt.slice(0, 100), aspectRatio });
                         try {
                             const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
                             if (!apiKey) {
-                                const r = { success: false, message: 'Chave de API não configurada.' };
-                                logToolResult('generateImage', r);
-                                return r;
+                                return { success: false, message: 'Chave de API não configurada.' };
                             }
-
-                            const requestBody = {
-                                contents: [{ parts: [{ text: prompt }] }],
-                                generationConfig: { responseModalities: ['Image', 'Text'] },
-                            };
 
                             console.log('  📡 Calling Gemini image API...');
                             const response = await fetch(
@@ -336,21 +398,23 @@ export async function POST(req: Request) {
                                 {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(requestBody),
+                                    body: JSON.stringify({
+                                        contents: [{ parts: [{ text: prompt }] }],
+                                        generationConfig: { responseModalities: ['Image', 'Text'] },
+                                    }),
                                 }
                             );
 
                             if (!response.ok) {
                                 const errText = await response.text();
                                 console.error('  ❌ Gemini image API error:', response.status, errText.slice(0, 200));
-                                const r = { success: false, message: `Erro na API: ${response.status}. Tente novamente.` };
-                                logToolResult('generateImage', r);
-                                return r;
+                                return { success: false, message: `Erro na API: ${response.status}. Tente novamente.` };
                             }
 
                             const data = await response.json();
                             const parts = data.candidates?.[0]?.content?.parts || [];
-                            console.log(`  📦 Response parts: ${parts.length} (${parts.map((p: any) => p.inlineData ? 'image' : 'text').join(', ')})`);
+                            const partTypes = parts.map((p: any) => p.inlineData ? 'image' : 'text').join(', ');
+                            console.log(`  📦 Parts: ${parts.length} (${partTypes})`);
 
                             for (const part of parts) {
                                 if (part.inlineData) {
@@ -361,16 +425,11 @@ export async function POST(req: Request) {
                                         const imageBuffer = Buffer.from(part.inlineData.data, 'base64');
                                         const { error: uploadError } = await supabase.storage
                                             .from('imagensgeradas')
-                                            .upload(fileName, imageBuffer, {
-                                                contentType: part.inlineData.mimeType,
-                                                upsert: false,
-                                            });
+                                            .upload(fileName, imageBuffer, { contentType: part.inlineData.mimeType, upsert: false });
 
                                         if (uploadError) {
                                             console.error('  ❌ Supabase upload error:', uploadError.message);
-                                            const r = { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (não salva no storage).' };
-                                            logToolResult('generateImage', r);
-                                            return r;
+                                            return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (não salva no storage).' };
                                         }
 
                                         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -378,42 +437,39 @@ export async function POST(req: Request) {
                                             .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
                                         if (signedUrlError || !signedUrlData?.signedUrl) {
-                                            const r = { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (erro ao gerar URL).' };
-                                            logToolResult('generateImage', r);
-                                            return r;
+                                            return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (erro ao gerar URL).' };
                                         }
 
-                                        const r = { success: true, imageUrl: signedUrlData.signedUrl, message: 'Imagem gerada e salva com sucesso!' };
-                                        logToolResult('generateImage', r);
-                                        return r;
+                                        return { success: true, imageUrl: signedUrlData.signedUrl, message: 'Imagem gerada e salva com sucesso!' };
                                     } catch (uploadErr) {
                                         console.error('  ❌ Upload exception:', uploadErr);
-                                        const r = { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (falha no storage).' };
-                                        logToolResult('generateImage', r);
-                                        return r;
+                                        return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (falha no storage).' };
                                     }
                                 }
                             }
 
                             const textParts = parts.filter((p: { text?: string }) => p.text);
-                            if (textParts.length > 0) {
-                                console.log('  ⚠️  Only text returned:', textParts[0].text?.slice(0, 100));
-                            }
-                            const r = { success: false, message: 'A API retornou texto em vez de imagem.' };
-                            logToolResult('generateImage', r);
-                            return r;
+                            if (textParts.length > 0) console.log('  ⚠️  Only text returned:', textParts[0].text?.slice(0, 100));
+                            return { success: false, message: 'A API retornou texto em vez de imagem.' };
                         } catch (err) {
                             console.error('  ❌ generateImage exception:', err);
-                            const r = { success: false, message: 'Erro ao gerar a imagem.' };
-                            logToolResult('generateImage', r);
-                            return r;
+                            return { success: false, message: 'Erro ao gerar a imagem.' };
                         }
                     },
                 }),
             },
-            stopWhen: stepCountIs(10),
+
+            // Google Search grounding for Gemini (searches inline, no tool call)
+            providerOptions: modelContext !== 'chatgpt' ? {
+                google: { useSearchGrounding: true },
+            } : undefined,
+
+            onStepFinish({ stepNumber, text, toolCalls, finishReason, usage }) {
+                const toolNames = toolCalls?.map(tc => tc.toolName).join(', ') || 'none';
+                console.log(`  📍 Step ${stepNumber} done  │  reason=${finishReason}  │  tools=[${toolNames}]  │  tokens=${usage?.totalTokens ?? '?'}`);
+            },
             onFinish({ usage, steps }) {
-                logFinish(usage, steps?.length ?? stepCount, Date.now() - t0);
+                logFinish(usage, steps?.length ?? 0, Date.now() - t0);
             },
             onError({ error }) {
                 console.error('\n  ❌ ZENINHO STREAM ERROR:', error);
@@ -421,9 +477,7 @@ export async function POST(req: Request) {
             },
         });
 
-        return result.toUIMessageStreamResponse({
-            sendSources: true,
-        });
+        return result.toUIMessageStreamResponse({ sendSources: true });
     } catch (error) {
         console.error('\n  ❌ ZENINHO API ERROR:', error);
         console.log(sep('═') + '\n');
