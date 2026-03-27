@@ -139,9 +139,19 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     for (const message of uiMessages) {
         if (message.role === 'user') {
             const content: any[] = [];
-            if (message.content) {
-                content.push({ type: 'text', text: message.content });
+
+            // New AI SDK UIMessage format: text lives in message.parts[]
+            // Legacy format: text lives in message.content (string)
+            const textFromParts = (message.parts ?? [])
+                .filter((p: any) => p.type === 'text')
+                .map((p: any) => p.text)
+                .join('');
+            const textValue = textFromParts || message.content || '';
+
+            if (textValue) {
+                content.push({ type: 'text', text: textValue });
             }
+
             if (message.experimental_attachments) {
                 for (const attachment of message.experimental_attachments) {
                     if (attachment.url.startsWith('data:')) {
@@ -154,11 +164,11 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     }
                 }
             }
+
             if (content.length > 0) {
                 coreMessages.push({ role: 'user', content });
             } else {
-                // Skip messages with no content at all — Gemini rejects empty parts
-                console.warn('  ⚠️  Skipping user message with no content or attachments');
+                console.warn('  ⚠️  Skipping user message with no text or attachments');
             }
         } else if (message.role === 'assistant') {
             if (message.toolInvocations && message.toolInvocations.length > 0) {
@@ -189,7 +199,15 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     });
                 }
             } else {
-                coreMessages.push({ role: 'assistant', content: message.content || '' });
+                // Also check parts for text in new SDK format
+                const textFromParts = (message.parts ?? [])
+                    .filter((p: any) => p.type === 'text')
+                    .map((p: any) => p.text)
+                    .join('');
+                const textValue = textFromParts || message.content || '';
+                if (textValue) {
+                    coreMessages.push({ role: 'assistant', content: textValue });
+                }
             }
         } else if (message.role === 'system') {
             coreMessages.push({ role: 'system', content: message.content || '' });
@@ -264,6 +282,14 @@ export async function POST(req: Request) {
 
         const coreMessages = sanitizeMessages(customConvertToCoreMessages(messages));
         logRequest(modelId, coreMessages);
+
+        if (coreMessages.length === 0) {
+            console.warn('  ⚠️  All messages were empty after sanitization — aborting');
+            return new Response(
+                JSON.stringify({ error: 'Mensagem vazia. Por favor, escreva algo antes de enviar.' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+        }
 
         const result = streamText({
             model: aiModel,
