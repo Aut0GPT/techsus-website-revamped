@@ -157,7 +157,8 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
             if (content.length > 0) {
                 coreMessages.push({ role: 'user', content });
             } else {
-                coreMessages.push({ role: 'user', content: '' });
+                // Skip messages with no content at all — Gemini rejects empty parts
+                console.warn('  ⚠️  Skipping user message with no content or attachments');
             }
         } else if (message.role === 'assistant') {
             if (message.toolInvocations && message.toolInvocations.length > 0) {
@@ -196,6 +197,15 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     }
     return coreMessages;
 };
+
+// ─── Strip messages with empty content (Gemini rejects empty parts) ──────────
+function sanitizeMessages(messages: any[]): any[] {
+    return messages.filter(m => {
+        if (typeof m.content === 'string') return m.content.trim().length > 0;
+        if (Array.isArray(m.content)) return m.content.length > 0;
+        return false;
+    });
+}
 
 // ─── Logger ──────────────────────────────────────────────────────────────────
 const sep = (char = '─', len = 72) => char.repeat(len);
@@ -239,7 +249,7 @@ export async function POST(req: Request) {
 
         const customOpenai = createOpenAI({ apiKey: process.env.openai_key || '' });
 
-        const modelId = modelContext === 'chatgpt' ? 'gpt-4o-mini-search-preview' : 'gemini-2.0-flash';
+        const modelId = modelContext === 'chatgpt' ? 'gpt-4o-mini-search-preview' : 'gemini-3-flash-preview';
         // ChatGPT: use Responses API (has built-in web search)
         // Gemini: use standard chat completions (search via providerOptions grounding)
         const baseModel = modelContext === 'chatgpt'
@@ -252,7 +262,7 @@ export async function POST(req: Request) {
             middleware: createRagMiddleware(),
         });
 
-        const coreMessages = customConvertToCoreMessages(messages);
+        const coreMessages = sanitizeMessages(customConvertToCoreMessages(messages));
         logRequest(modelId, coreMessages);
 
         const result = streamText({
