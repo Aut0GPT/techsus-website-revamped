@@ -709,6 +709,7 @@ export default function ZeninhoChat() {
                                                     args={toolArgs}
                                                     state={toolState}
                                                     result={toolResult}
+                                                    isStreaming={isLoading}
                                                 />
                                             );
                                         }
@@ -1000,13 +1001,19 @@ function DownloadImageButton({ url }: { url: string }) {
 
 // ── Helper: Rich tool call card ───────────────────────────────────────────────
 
-function ToolCallCard({ toolName, args, state, result }: {
+function ToolCallCard({ toolName, args, state, result, isStreaming }: {
     toolName: string;
     args: any;
     state: string;
     result: any;
+    isStreaming: boolean;
 }) {
-    const isDone = state === 'result' || result != null;
+    // A tool call is done when:
+    //   1. The SDK explicitly marked it as 'result', OR
+    //   2. A result object exists (SDK sometimes skips the state update), OR
+    //   3. The entire stream has finished — meaning no tool call can still be pending.
+    // Note: use != (loose) so both null and undefined are treated as "no result".
+    const isDone = state === 'result' || result != null || !isStreaming;
 
     type ToolConfig = {
         icon: React.ReactNode;
