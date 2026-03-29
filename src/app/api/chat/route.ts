@@ -389,7 +389,7 @@ export async function POST(req: Request) {
             // ── Per-tool lifecycle logging ─────────────────────────────────────────────
             experimental_onToolCallStart(event: any) {
                 const name: string = event.toolCall?.toolName ?? 'unknown';
-                const argsPreview = String(event.toolCall?.args ?? '{}').slice(0, 120);
+                const argsPreview = JSON.stringify(event.toolCall?.args ?? {}).slice(0, 120);
                 console.log(`\n  🔧 → ${name}  args: ${argsPreview}`);
             },
             experimental_onToolCallFinish(event: any) {
@@ -422,11 +422,13 @@ export async function POST(req: Request) {
                 searchDocuments: tool({
                     description: 'Busca documentos relevantes na base de conhecimento da TECHSUS usando busca híbrida (semântica + palavras-chave). Use quando o usuário perguntar sobre documentos, processos, especificações técnicas, patentes ou qualquer informação que possa estar nos documentos da empresa.',
                     inputSchema: z.object({
-                        query: z.string().describe('Consulta em português para buscar nos documentos TECHSUS. Seja específico e use termos técnicos quando relevante.'),
+                        query: z.string().optional().describe('Consulta em português para buscar nos documentos TECHSUS. Seja específico e use termos técnicos quando relevante.'),
                     }),
-                    strict: true,
                     execute: async ({ query }) => {
                         try {
+                            if (!query || query.trim() === '') {
+                                return { results: [] as any[], message: 'A busca requer um termo (query). Tente novamente sendo específico no termo de busca.' };
+                            }
                             const { data, error } = await hybridSearch(query, 5);
 
                             if (error || !data || data.length === 0) {
@@ -509,7 +511,7 @@ export async function POST(req: Request) {
                 generateImage: tool({
                     description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
                     inputSchema: z.object({
-                        prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
+                        prompt: z.string().optional().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
                         aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para fotos quadradas, 9:16 para stories/vertical.'),
                     }),
                     execute: async ({ prompt, aspectRatio = '16:9' }) => {
@@ -519,7 +521,13 @@ export async function POST(req: Request) {
                                 return { success: false, message: 'Chave de API não configurada.' };
                             }
 
+                            if (!prompt) {
+                                return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
+                            }
+
                             console.log('  📡 Calling Gemini image API...');
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
                             const response = await fetch(
                                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
                                 {
@@ -529,8 +537,10 @@ export async function POST(req: Request) {
                                         contents: [{ parts: [{ text: prompt }] }],
                                         generationConfig: { responseModalities: ['Image', 'Text'] },
                                     }),
+                                    signal: controller.signal
                                 }
                             );
+                            clearTimeout(timeoutId);
 
                             if (!response.ok) {
                                 const errText = await response.text();
@@ -578,7 +588,11 @@ export async function POST(req: Request) {
                             const textParts = parts.filter((p: { text?: string }) => p.text);
                             if (textParts.length > 0) console.log('  ⚠️  Only text returned:', textParts[0].text?.slice(0, 100));
                             return { success: false, message: 'A API retornou texto em vez de imagem.' };
-                        } catch (err) {
+                        } catch (err: any) {
+                            if (err.name === 'AbortError') {
+                                console.error('  ❌ generateImage timeout');
+                                return { success: false, message: 'A API de imagens excedeu o tempo limite (timeout de 30s).' };
+                            }
                             console.error('  ❌ generateImage exception:', err);
                             return { success: false, message: 'Erro ao gerar a imagem.' };
                         }
