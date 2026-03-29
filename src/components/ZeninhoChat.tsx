@@ -1006,7 +1006,7 @@ function ToolCallCard({ toolName, args, state, result }: {
     state: string;
     result: any;
 }) {
-    const isDone = state === 'result';
+    const isDone = state === 'result' || result != null;
 
     type ToolConfig = {
         icon: React.ReactNode;
