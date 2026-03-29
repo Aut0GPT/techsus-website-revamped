@@ -134,6 +134,9 @@ export default function ZeninhoChat() {
     const recognitionRef = useRef<any>(null);
     const lastStatusRef = useRef(status);
     const savingRef = useRef(false);
+    // Tool invocation cache — persists tool parts even after the SDK drops them from message.parts
+    // Key: message.id  Value: array of tool-invocation parts seen for that message
+    const toolCacheRef = useRef<Record<string, any[]>>({});
 
     const isLoading = status === 'streaming' || status === 'submitted';
 
@@ -173,6 +176,43 @@ export default function ZeninhoChat() {
         }
         lastStatusRef.current = status;
     }, [status]);
+
+    // ── Cache tool invocations as they stream in ──────────────────────────
+    // The AI SDK can drop tool-invocation parts from message.parts once the
+    // multi-step stream finalises. We save every tool part we ever see so
+    // they keep rendering in the chat after the SDK clears them.
+    useEffect(() => {
+        messages.forEach((msg) => {
+            if (msg.role !== 'assistant') return;
+            const toolParts = (msg.parts ?? []).filter((p: any) => {
+                const t: string = p?.type ?? '';
+                return t === 'tool-invocation' || t === 'tool-call' || t === 'tool-result' || t.includes('tool');
+            });
+            if (toolParts.length === 0) return;
+
+            const existing: any[] = toolCacheRef.current[msg.id] ?? [];
+            let changed = false;
+            const merged = [...existing];
+
+            toolParts.forEach((tp: any) => {
+                const inv = tp.toolInvocation ?? tp;
+                const idx = merged.findIndex((e: any) => (e.toolInvocation ?? e).toolCallId === inv.toolCallId);
+                if (idx === -1) {
+                    merged.push(tp);
+                    changed = true;
+                } else {
+                    // Upgrade: if we now have a result that we didn't have before, keep it
+                    const existingInv = merged[idx].toolInvocation ?? merged[idx];
+                    if (!existingInv.result && inv.result) {
+                        merged[idx] = tp;
+                        changed = true;
+                    }
+                }
+            });
+
+            if (changed) toolCacheRef.current[msg.id] = merged;
+        });
+    }, [messages]);
 
     // ── Scroll to bottom ──────────────────────────────────────────────────
     useEffect(() => {
@@ -242,6 +282,7 @@ export default function ZeninhoChat() {
         if (data) {
             setCurrentConversationId(conv.id);
             setAiModel((data.model as 'gemini' | 'chatgpt') ?? 'gemini');
+            toolCacheRef.current = {};
             setMessages(data.messages ?? []);
         }
         setShowSidebar(false);
@@ -250,6 +291,7 @@ export default function ZeninhoChat() {
     const startNewConversation = () => {
         setCurrentConversationId(null);
         setMessages([]);
+        toolCacheRef.current = {};
         setInput('');
         setChatFiles(undefined);
         setFilePreviews([]);
@@ -374,6 +416,31 @@ export default function ZeninhoChat() {
         zeninhoMood === 'thinking' ? '/images/zezinho/zeninhopensando.png' :
         zeninhoMood === 'done'     ? '/images/zezinho/zeninhojasei.png' :
                                      '/images/zezinho/Zeninhonormal.png';
+
+    // ── Merge cached tool parts into message.parts for rendering ─────────
+    // Returns parts array guaranteed to include all tool invocations we've
+    // ever seen for this message, even if the SDK later dropped them.
+    const partsWithTools = (message: any): any[] => {
+        const parts: any[] = [...(message.parts ?? [])];
+        const cached: any[] = toolCacheRef.current[message.id] ?? [];
+
+        cached.forEach((cachedPart) => {
+            const cachedInv = cachedPart.toolInvocation ?? cachedPart;
+            const alreadyThere = parts.some((p) => {
+                const t: string = p?.type ?? '';
+                if (!(t === 'tool-invocation' || t === 'tool-call' || t === 'tool-result' || t.includes('tool'))) return false;
+                return (p.toolInvocation ?? p).toolCallId === cachedInv.toolCallId;
+            });
+            if (!alreadyThere) {
+                // Insert before first text part so tools appear above the response text
+                const firstText = parts.findIndex((p) => p?.type === 'text');
+                if (firstText === -1) parts.push(cachedPart);
+                else parts.splice(firstText, 0, cachedPart);
+            }
+        });
+
+        return parts;
+    };
 
     // ─────────────────────────────────────────────────────────────────────
     return (
@@ -613,7 +680,7 @@ export default function ZeninhoChat() {
                                         : 'bg-white text-gray-800 rounded-bl-md border border-gray-200 shadow-sm'
                                 } ${fontSizeClass}`}>
 
-                                    {message.parts.map((part, index) => {
+                                    {partsWithTools(message).map((part, index) => {
                                         // ── Text part ───────────────────────────────────────
                                         if (part.type === 'text') {
                                             const segments = part.text.split(/(!\[.*?\]\(.*?\))/g);
@@ -622,7 +689,7 @@ export default function ZeninhoChat() {
                                             if (hasImages) {
                                                 return (
                                                     <div key={index} className="text-sm leading-relaxed">
-                                                        {segments.map((seg, i) => {
+                                                        {segments.map((seg: string, i: number) => {
                                                             const m = seg.match(/^!\[(.*?)\]\((.*?)\)$/);
                                                             if (m) {
                                                                 const [, alt, url] = m;
