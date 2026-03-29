@@ -201,10 +201,21 @@ export default function ZeninhoChat() {
                     merged.push(tp);
                     changed = true;
                 } else {
-                    // Upgrade: if we now have a result that we didn't have before, keep it
+                    // Upgrade: if we now have a result that we didn't have before, keep it.
+                    // Preserve toolName from the call part — some SDK versions omit it in the result part.
                     const existingInv = merged[idx].toolInvocation ?? merged[idx];
                     if (!existingInv.result && inv.result) {
-                        merged[idx] = tp;
+                        if (!inv.toolName && existingInv.toolName) {
+                            const upgraded = { ...tp };
+                            if (upgraded.toolInvocation) {
+                                upgraded.toolInvocation = { ...upgraded.toolInvocation, toolName: existingInv.toolName };
+                            } else {
+                                upgraded.toolName = existingInv.toolName;
+                            }
+                            merged[idx] = upgraded;
+                        } else {
+                            merged[idx] = tp;
+                        }
                         changed = true;
                     }
                 }
@@ -248,7 +259,29 @@ export default function ZeninhoChat() {
         savingRef.current = true;
         try {
             const supabase = createBrowserSupabaseClient();
-            const stored = sanitizeForStorage(messages);
+            // Merge cached tool parts back in before saving — the SDK drops them from
+            // message.parts after multi-step streaming, but we need them persisted.
+            const messagesWithTools = messages.map((msg) => {
+                if (msg.role !== 'assistant') return msg;
+                const cached: any[] = toolCacheRef.current[msg.id] ?? [];
+                if (cached.length === 0) return msg;
+                const parts: any[] = [...(msg.parts ?? [])];
+                cached.forEach((cachedPart: any) => {
+                    const cachedInv = cachedPart.toolInvocation ?? cachedPart;
+                    const alreadyThere = parts.some((pp: any) => {
+                        const t: string = pp?.type ?? '';
+                        if (!(t === 'tool-invocation' || t.includes('tool'))) return false;
+                        return (pp.toolInvocation ?? pp).toolCallId === cachedInv.toolCallId;
+                    });
+                    if (!alreadyThere) {
+                        const firstText = parts.findIndex((pp: any) => pp?.type === 'text');
+                        if (firstText === -1) parts.push(cachedPart);
+                        else parts.splice(firstText, 0, cachedPart);
+                    }
+                });
+                return { ...msg, parts };
+            });
+            const stored = sanitizeForStorage(messagesWithTools);
             const title = generateTitle(messages);
 
             if (currentConversationId) {
@@ -753,11 +786,12 @@ export default function ZeninhoChat() {
                                             (typeof part.type === 'string' && part.type.includes('tool'))
                                         ) {
                                             const p = part as any;
-                                            const inv = p.toolInvocation || p;
-                                            const toolName: string = inv.toolName || '';
-                                            const toolState: string = inv.state || '';
-                                            const toolArgs = inv.args || {};
-                                            const toolResult = inv.result || null;
+                                            const inv = p.toolInvocation ?? p;
+                                            // toolName may live on p directly (flat SDK parts) or inside toolInvocation
+                                            const toolName: string = p.toolName || p.toolInvocation?.toolName || inv.toolName || '';
+                                            const toolState: string = p.state || p.toolInvocation?.state || inv.state || '';
+                                            const toolArgs = p.args || p.toolInvocation?.args || inv.args || {};
+                                            const toolResult = p.result ?? p.toolInvocation?.result ?? inv.result ?? null;
 
                                             // Show generated image inline from tool result
                                             if (toolName === 'generateImage' && toolState === 'result' && toolResult?.imageUrl) {
@@ -817,24 +851,6 @@ export default function ZeninhoChat() {
                             </div>
                         ))}
 
-                        {/* Thinking indicator */}
-                        {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                            <div className="flex gap-3">
-                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-lg shadow-orange-500/10">
-                                    <Image src="/images/zezinho/zeninhopensando.png" alt="Zeninho pensando" width={36} height={36} className="w-full h-full object-cover animate-pulse" />
-                                </div>
-                                <div className="bg-stone-800/80 rounded-2xl rounded-bl-md px-4 py-3 border border-stone-700/50">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex gap-1.5">
-                                            <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                            <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                                            <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                                        </div>
-                                        <span className="text-xs text-stone-500 ml-1">Pensando...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         <div ref={messagesEndRef} />
                     </div>
