@@ -11,8 +11,40 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
+// ─── Simple LRU-ish embedding cache (avoids redundant API calls) ─────────────
+const embeddingCache = new Map<string, { embedding: number[]; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_MAX = 50;
+
+function getCachedEmbedding(key: string): number[] | null {
+    const entry = embeddingCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.ts > CACHE_TTL) {
+        embeddingCache.delete(key);
+        return null;
+    }
+    return entry.embedding;
+}
+
+function setCachedEmbedding(key: string, embedding: number[]) {
+    if (embeddingCache.size >= CACHE_MAX) {
+        // Evict oldest
+        const oldest = embeddingCache.keys().next().value;
+        if (oldest) embeddingCache.delete(oldest);
+    }
+    embeddingCache.set(key, { embedding, ts: Date.now() });
+}
+
 // ─── Embed helper (shared between tool + middleware) ─────────────────────────
 async function embedQuery(text: string): Promise<number[] | null> {
+    // Check cache first
+    const cached = getCachedEmbedding(text);
+    if (cached) {
+        console.log('  ⚡ Embedding cache HIT');
+        return cached;
+    }
+
+    const t0 = Date.now();
     const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
         {
@@ -27,11 +59,16 @@ async function embedQuery(text: string): Promise<number[] | null> {
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return data.embedding?.values ?? null;
+    const embedding = data.embedding?.values ?? null;
+    console.log(`  ⏱  Embedding generated in ${Date.now() - t0}ms`);
+
+    if (embedding) setCachedEmbedding(text, embedding);
+    return embedding;
 }
 
 // ─── Hybrid search (vector + full-text, falls back to vector-only) ───────────
 async function hybridSearch(query: string, matchCount = 5) {
+    const t0 = Date.now();
     const embedding = await embedQuery(query);
     if (!embedding) return { data: null, error: 'embedding failed' };
 
@@ -43,21 +80,25 @@ async function hybridSearch(query: string, matchCount = 5) {
     });
 
     if (!hybrid.error && hybrid.data?.length > 0) {
-        console.log(`  🔍 Hybrid search: ${hybrid.data.length} results`);
+        console.log(`  🔍 Hybrid search: ${hybrid.data.length} results in ${Date.now() - t0}ms`);
         return { data: hybrid.data, error: null };
     }
 
-    // Fallback: pure vector search
+    // Fallback: pure vector search (lower threshold to get results)
     console.log('  🔍 Falling back to vector-only search');
     const vector = await supabase.rpc('match_documents', {
         query_embedding: embedding,
-        match_threshold: 0.65,
+        match_threshold: 0.5,
         match_count: matchCount,
     });
+    console.log(`  🔍 Vector search completed in ${Date.now() - t0}ms`);
     return vector;
 }
 
 // ─── RAG middleware — auto-injects document context into every request ────────
+// Trivial messages that should skip RAG entirely
+const SKIP_RAG_PATTERNS = /^(oi|olá|ola|hey|hi|hello|obrigado|obg|valeu|tchau|bye|ok|sim|não|nao|haha|kk|rsrs|\?|!)/i;
+
 function createRagMiddleware() {
     return {
         specificationVersion: 'v3' as const,
@@ -71,24 +112,37 @@ function createRagMiddleware() {
                     ? lastUser.content
                     : (lastUser.content as any[])?.find((p: any) => p.type === 'text')?.text ?? '';
 
-                if (!text.trim() || text.length < 20) return params;
+                const trimmed = text.trim();
 
-                // Fetch top 3 relevant chunks with a 4s timeout
+                // Skip RAG for short or trivial messages
+                if (!trimmed || trimmed.length < 40 || SKIP_RAG_PATTERNS.test(trimmed)) {
+                    console.log('  ⏭️  RAG middleware: skipped (trivial/short message)');
+                    return params;
+                }
+
+                // Fetch top 2 relevant chunks with a 3s timeout
+                const t0 = Date.now();
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 4000);
+                const timer = setTimeout(() => controller.abort(), 3000);
                 try {
-                    const { data: chunks } = await hybridSearch(text, 3);
+                    const { data: chunks } = await hybridSearch(trimmed, 2);
                     clearTimeout(timer);
-                    if (!chunks || chunks.length === 0) return params;
+                    if (!chunks || chunks.length === 0) {
+                        console.log(`  🧠 RAG middleware: no results (${Date.now() - t0}ms)`);
+                        return params;
+                    }
 
-                    const highConfidence = chunks.filter((c: any) => (c.similarity ?? 0) >= 0.65);
-                    if (highConfidence.length === 0) return params;
+                    const highConfidence = chunks.filter((c: any) => (c.similarity ?? 0) >= 0.6);
+                    if (highConfidence.length === 0) {
+                        console.log(`  🧠 RAG middleware: no high-confidence results (${Date.now() - t0}ms)`);
+                        return params;
+                    }
 
                     const context = highConfidence
                         .map((c: any, i: number) => `[Trecho ${i + 1} | Score: ${(c.similarity ?? 0).toFixed(2)}]\n${c.content}`)
                         .join('\n\n---\n\n');
 
-                    console.log(`  🧠 RAG middleware: injected ${highConfidence.length} chunk(s) into system prompt`);
+                    console.log(`  🧠 RAG middleware: injected ${highConfidence.length} chunk(s) in ${Date.now() - t0}ms`);
 
                     return {
                         ...params,
@@ -96,6 +150,7 @@ function createRagMiddleware() {
                     };
                 } catch {
                     clearTimeout(timer);
+                    console.log(`  🧠 RAG middleware: timed out after ${Date.now() - t0}ms`);
                     return params;
                 }
             } catch {
