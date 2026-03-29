@@ -5,6 +5,8 @@ import { DefaultChatTransport } from 'ai';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation, Paperclip, Mic, MicOff, X, Volume2, Cpu, Settings, Moon, Sun, Type, Bell, BellOff, Check } from 'lucide-react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 /* eslint-disable */
 declare global {
@@ -533,9 +535,60 @@ export default function ZeninhoChat() {
                                             return (
                                                 <div
                                                     key={index}
-                                                    className="whitespace-pre-wrap text-base leading-relaxed [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4"
+                                                    className={`prose prose-sm max-w-none leading-relaxed ${dm
+                                                        ? 'prose-invert prose-p:text-stone-100 prose-strong:text-white prose-headings:text-white prose-li:text-stone-200 prose-a:text-orange-400 hover:prose-a:text-orange-300 prose-code:text-orange-300 prose-code:bg-stone-700/50 prose-pre:bg-stone-900 prose-blockquote:border-orange-500/50 prose-blockquote:text-stone-300'
+                                                        : 'prose-p:text-gray-800 prose-strong:text-gray-900 prose-headings:text-gray-900 prose-li:text-gray-700 prose-a:text-orange-600 hover:prose-a:text-orange-500 prose-code:text-orange-600 prose-code:bg-gray-100 prose-pre:bg-gray-50'
+                                                        }`}
                                                 >
-                                                    {part.text}
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            img: ({ src, alt }) => {
+                                                                if (!src) return null;
+                                                                return (
+                                                                    <div className="mt-3 mb-2">
+                                                                        <img
+                                                                            src={src}
+                                                                            alt={alt || 'Imagem gerada pelo Zeninho'}
+                                                                            className="rounded-xl max-w-full shadow-lg border border-stone-700/30"
+                                                                        />
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                try {
+                                                                                    const res = await fetch(src);
+                                                                                    const blob = await res.blob();
+                                                                                    const blobUrl = URL.createObjectURL(blob);
+                                                                                    const a = document.createElement('a');
+                                                                                    a.href = blobUrl;
+                                                                                    a.download = `zeninho-image-${Date.now()}.jpg`;
+                                                                                    document.body.appendChild(a);
+                                                                                    a.click();
+                                                                                    document.body.removeChild(a);
+                                                                                    URL.revokeObjectURL(blobUrl);
+                                                                                } catch { alert('Erro ao baixar imagem.'); }
+                                                                            }}
+                                                                            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-600/20 to-orange-500/10 hover:from-orange-600/40 hover:to-orange-500/20 border border-orange-500/30 hover:border-orange-400/50 text-orange-300 hover:text-orange-200 text-xs font-medium transition-all duration-300 shadow-sm hover:shadow-orange-500/10"
+                                                                        >
+                                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                                                            Baixar imagem
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            },
+                                                            a: ({ href, children }) => (
+                                                                <a href={href} target="_blank" rel="noopener noreferrer" className="underline">{children}</a>
+                                                            ),
+                                                            code: ({ children, className }) => {
+                                                                const isBlock = className?.includes('language-');
+                                                                if (isBlock) {
+                                                                    return <code className={`${className} block rounded-lg p-3 text-xs overflow-x-auto`}>{children}</code>;
+                                                                }
+                                                                return <code className="px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>;
+                                                            },
+                                                        }}
+                                                    >
+                                                        {part.text}
+                                                    </ReactMarkdown>
                                                 </div>
                                             );
                                         } else if (part.type === 'file') {

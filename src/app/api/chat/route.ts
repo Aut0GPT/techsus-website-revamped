@@ -378,9 +378,9 @@ export async function POST(req: Request) {
                     // Keep doc search available; ChatGPT also keeps webSearch
                     return {
                         activeTools: (modelContext === 'chatgpt'
-                            ? ['searchDocuments', 'listDocuments', 'webSearch']
-                            : ['searchDocuments', 'listDocuments']
-                        ) as Array<'searchDocuments' | 'listDocuments' | 'webSearch' | 'generateImage'>,
+                            ? ['searchDocuments', 'listDocuments', 'webSearch', 'getDateTime', 'calculateArea']
+                            : ['searchDocuments', 'listDocuments', 'getDateTime', 'calculateArea']
+                        ) as any,
                     };
                 }
                 return undefined;
@@ -470,6 +470,27 @@ export async function POST(req: Request) {
                         } catch {
                             return { documents: [] as any[], message: 'Erro ao listar documentos.' };
                         }
+                    },
+                }),
+
+                getDateTime: tool({
+                    description: 'Retorna a data e hora atual no fuso horário do Brasil (Brasília). Use isso sempre que o usuário perguntar "que dia é hoje", "que horas são" ou fizer referências a "hoje", "ontem", "amanhã" para ter o contexto do tempo real.',
+                    inputSchema: z.object({}),
+                    execute: async () => {
+                        const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                        return { datetime: now, message: `A data e hora atual é ${now}` };
+                    },
+                }),
+
+                calculateArea: tool({
+                    description: 'Calcula a área de uma superfície retangular (ex: terrenos, painéis, pisos) com base na largura e comprimento em metros.',
+                    inputSchema: z.object({
+                        width: z.number().describe('Largura em metros'),
+                        length: z.number().describe('Comprimento em metros'),
+                    }),
+                    execute: async ({ width, length }) => {
+                        const area = width * length;
+                        return { width, length, area, message: `A área calculada é de ${area.toFixed(2)} metros quadrados.` };
                     },
                 }),
 
