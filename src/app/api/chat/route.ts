@@ -534,15 +534,6 @@ export async function POST(req: Request) {
                 return undefined;
             },
 
-            // ── Thinking mode (Gemini extended reasoning for complex tasks) ────
-            ...(modelContext !== 'chatgpt' ? {
-                providerOptions: {
-                    google: {
-                        thinkingConfig: { thinkingBudget: 8000 },
-                    },
-                },
-            } : {}),
-
             // ── Per-tool lifecycle logging ─────────────────────────────────────────────
             experimental_onToolCallStart(event: any) {
                 const name: string = event.toolCall?.toolName ?? 'unknown';
