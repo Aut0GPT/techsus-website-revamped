@@ -715,7 +715,12 @@ export default function ZeninhoChat() {
                             <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 {message.role !== 'user' && (
                                     <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 mt-1 shadow-lg shadow-orange-500/10">
-                                        <Image src="/images/zezinho/zeninhojasei.png" alt="Zeninho" width={36} height={36} className="w-full h-full object-cover" />
+                                        <Image
+                                            src={isLoading && message.id === messages[messages.length - 1]?.id
+                                                ? '/images/zezinho/zeninhopensando.png'
+                                                : '/images/zezinho/zeninhojasei.png'}
+                                            alt="Zeninho" width={36} height={36} className="w-full h-full object-cover"
+                                        />
                                     </div>
                                 )}
 
@@ -725,6 +730,19 @@ export default function ZeninhoChat() {
                                         ? 'bg-stone-800/80 text-stone-100 rounded-bl-md border border-stone-700/50'
                                         : 'bg-white text-gray-800 rounded-bl-md border border-gray-200 shadow-sm'
                                 } ${fontSizeClass}`}>
+
+                                    {/* Fallback: show Pensando inside the bubble while this message is streaming but has no content yet */}
+                                    {(() => {
+                                        if (!isLoading || message.role !== 'assistant') return null;
+                                        if (message.id !== messages[messages.length - 1]?.id) return null;
+                                        const vp = partsWithTools(message);
+                                        const hasContent = vp.some((p: any) =>
+                                            (p.type === 'text' && p.text?.trim()) ||
+                                            (p.type === 'tool-invocation' || (p.type && String(p.type).includes('tool')))
+                                        );
+                                        if (hasContent) return null;
+                                        return <ToolCallCard key="__pensando_fallback__" toolName="__pensando__" args={{}} state="call" result={null} isStreaming={true} />;
+                                    })()}
 
                                     {partsWithTools(message).map((part, index) => {
                                         // ── Text part ───────────────────────────────────────
@@ -864,25 +882,14 @@ export default function ZeninhoChat() {
                             </div>
                         ))}
 
-                        {/* ── "Pensando" indicator — shown while waiting for first AI token ── */}
+                        {/* ── "Pensando" — shown while waiting for the first streaming byte ── */}
                         {isLoading && messages[messages.length - 1]?.role === 'user' && (
                             <div className="flex gap-3">
                                 <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 mt-1 shadow-lg shadow-orange-500/10">
                                     <Image src="/images/zezinho/zeninhopensando.png" alt="Zeninho pensando" width={36} height={36} className="w-full h-full object-cover animate-pulse" />
                                 </div>
-                                <div className={`rounded-2xl rounded-bl-md px-4 py-3 ${dm ? 'bg-stone-800/80 border border-stone-700/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
-                                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border bg-orange-500/5 border-orange-500/15">
-                                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-orange-500/20 text-orange-400">
-                                            <Sparkles size={13} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5 text-orange-500/60">Zeninho</div>
-                                            <div className="text-xs font-medium text-orange-400">Pensando...</div>
-                                        </div>
-                                        <div className="shrink-0 ml-1">
-                                            <div className="w-3.5 h-3.5 border-[1.5px] border-orange-400 border-t-transparent rounded-full animate-spin opacity-80" />
-                                        </div>
-                                    </div>
+                                <div className={`max-w-[80%] lg:max-w-[65%] rounded-2xl rounded-bl-md px-4 py-3 ${dm ? 'bg-stone-800/80 text-stone-100 border border-stone-700/50' : 'bg-white text-gray-800 border border-gray-200 shadow-sm'} ${fontSizeClass}`}>
+                                    <ToolCallCard toolName="__pensando__" args={{}} state="call" result={null} isStreaming={true} />
                                 </div>
                             </div>
                         )}
@@ -1143,6 +1150,14 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
     };
 
     const configs: Record<string, ToolConfig> = {
+        __pensando__: {
+            icon: <Sparkles size={13} />,
+            color: 'orange',
+            label: 'Zeninho',
+            loadingText: 'Pensando...',
+            doneText: () => 'Pronto',
+            detail: () => null,
+        },
         searchDocuments: {
             icon: <Search size={13} />,
             color: 'blue',
@@ -1209,6 +1224,7 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
     };
 
     const colorMap: Record<string, { wrap: string; iconBg: string; iconText: string; label: string; text: string; detail: string }> = {
+        orange:  { wrap: isDone ? 'bg-orange-500/8 border-orange-500/25' : 'bg-orange-500/5 border-orange-500/15', iconBg: 'bg-orange-500/20',  iconText: 'text-orange-400',  label: 'text-orange-500/60', text: isDone ? 'text-orange-200' : 'text-orange-400',  detail: 'text-orange-400/55' },
         blue:    { wrap: isDone ? 'bg-blue-500/8 border-blue-500/25'    : 'bg-blue-500/5 border-blue-500/15',    iconBg: 'bg-blue-500/20',    iconText: 'text-blue-400',    label: 'text-blue-500/60',   text: isDone ? 'text-blue-200' : 'text-blue-400',    detail: 'text-blue-400/55' },
         violet:  { wrap: isDone ? 'bg-violet-500/8 border-violet-500/25' : 'bg-violet-500/5 border-violet-500/15', iconBg: 'bg-violet-500/20',  iconText: 'text-violet-400',  label: 'text-violet-500/60', text: isDone ? 'text-violet-200' : 'text-violet-400',  detail: 'text-violet-400/55' },
         amber:   { wrap: isDone ? 'bg-amber-500/8 border-amber-500/25'   : 'bg-amber-500/5 border-amber-500/15',   iconBg: 'bg-amber-500/20',   iconText: 'text-amber-400',   label: 'text-amber-500/60',  text: isDone ? 'text-amber-200' : 'text-amber-400',   detail: 'text-amber-400/55' },
