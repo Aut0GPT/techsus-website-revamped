@@ -451,25 +451,38 @@ export default function ZeninhoChat() {
                                      '/images/zezinho/Zeninhonormal.png';
 
     // ── Merge cached tool parts into message.parts for rendering ─────────
-    // Returns parts array guaranteed to include all tool invocations we've
-    // ever seen for this message, even if the SDK later dropped them.
+    // Returns parts array guaranteed to include all tool invocations for
+    // this message. Sources (in order of reliability):
+    //   1. message.parts — live SDK parts (may be dropped mid-stream)
+    //   2. toolCacheRef  — caught transiently in useEffect during streaming
+    //   3. message.toolInvocations — legacy SDK field, ALWAYS present after stream
     const partsWithTools = (message: any): any[] => {
         const parts: any[] = [...(message.parts ?? [])];
-        const cached: any[] = toolCacheRef.current[message.id] ?? [];
 
-        cached.forEach((cachedPart) => {
-            const cachedInv = cachedPart.toolInvocation ?? cachedPart;
+        // Insert a tool part before the first text part (so tools appear above response text).
+        // No-op if a part with the same toolCallId is already present.
+        const insertToolPart = (toolPart: any) => {
+            const inv = toolPart.toolInvocation ?? toolPart;
             const alreadyThere = parts.some((p) => {
                 const t: string = p?.type ?? '';
                 if (!(t === 'tool-invocation' || t === 'tool-call' || t === 'tool-result' || t.includes('tool'))) return false;
-                return (p.toolInvocation ?? p).toolCallId === cachedInv.toolCallId;
+                return (p.toolInvocation ?? p).toolCallId === inv.toolCallId;
             });
             if (!alreadyThere) {
-                // Insert before first text part so tools appear above the response text
                 const firstText = parts.findIndex((p) => p?.type === 'text');
-                if (firstText === -1) parts.push(cachedPart);
-                else parts.splice(firstText, 0, cachedPart);
+                if (firstText === -1) parts.push(toolPart);
+                else parts.splice(firstText, 0, toolPart);
             }
+        };
+
+        // Source 1: toolCacheRef (transient parts caught during streaming)
+        (toolCacheRef.current[message.id] ?? []).forEach(insertToolPart);
+
+        // Source 2: message.toolInvocations — reliably populated by the SDK even after
+        // multi-step streaming drops tool parts from message.parts. This is the main
+        // fix for tool cards showing generic "Concluído" instead of real tool names.
+        ((message.toolInvocations as any[]) ?? []).forEach((ti: any) => {
+            insertToolPart({ type: 'tool-invocation', toolInvocation: ti });
         });
 
         return parts;
@@ -851,6 +864,28 @@ export default function ZeninhoChat() {
                             </div>
                         ))}
 
+                        {/* ── "Pensando" indicator — shown while waiting for first AI token ── */}
+                        {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                            <div className="flex gap-3">
+                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 mt-1 shadow-lg shadow-orange-500/10">
+                                    <Image src="/images/zezinho/zeninhopensando.png" alt="Zeninho pensando" width={36} height={36} className="w-full h-full object-cover animate-pulse" />
+                                </div>
+                                <div className={`rounded-2xl rounded-bl-md px-4 py-3 ${dm ? 'bg-stone-800/80 border border-stone-700/50' : 'bg-white border border-gray-200 shadow-sm'}`}>
+                                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border bg-orange-500/5 border-orange-500/15">
+                                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-orange-500/20 text-orange-400">
+                                            <Sparkles size={13} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5 text-orange-500/60">Zeninho</div>
+                                            <div className="text-xs font-medium text-orange-400">Pensando...</div>
+                                        </div>
+                                        <div className="shrink-0 ml-1">
+                                            <div className="w-3.5 h-3.5 border-[1.5px] border-orange-400 border-t-transparent rounded-full animate-spin opacity-80" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div ref={messagesEndRef} />
                     </div>
@@ -1167,9 +1202,9 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
     const cfg: ToolConfig = configs[toolName] ?? {
         icon: <Zap size={13} />,
         color: 'stone',
-        label: toolName,
-        loadingText: 'Processando...',
-        doneText: () => 'Concluído',
+        label: toolName || 'Ferramenta',
+        loadingText: 'Pensando...',
+        doneText: () => toolName || 'Concluído',
         detail: () => null,
     };
 
