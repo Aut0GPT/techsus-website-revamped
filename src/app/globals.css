@@ -8,3 +8,35 @@ body {
   overflow: hidden;
   height: 100%;
 }
+
+/* ── Custom scrollbar — dark, minimal, on-brand ──────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 113, 108, 0.35) transparent;
+}
+
+/* Chrome / Edge / Safari */
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 113, 108, 0.35);
+  border-radius: 99px;
+  transition: background 0.2s;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 146, 60, 0.45);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
