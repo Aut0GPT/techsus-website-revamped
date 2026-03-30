@@ -204,18 +204,25 @@ export default function ZeninhoChat() {
                     // Upgrade: if we now have a result that we didn't have before, keep it.
                     // Preserve toolName from the call part — some SDK versions omit it in the result part.
                     const existingInv = merged[idx].toolInvocation ?? merged[idx];
-                    if (!existingInv.result && inv.result) {
-                        if (!inv.toolName && existingInv.toolName) {
-                            const upgraded = { ...tp };
-                            if (upgraded.toolInvocation) {
-                                upgraded.toolInvocation = { ...upgraded.toolInvocation, toolName: existingInv.toolName };
-                            } else {
-                                upgraded.toolName = existingInv.toolName;
-                            }
-                            merged[idx] = upgraded;
+                    const existingIsDone = existingInv.result != null || existingInv.output != null ||
+                        ['result', 'output-available', 'output-error'].includes(existingInv.state ?? '');
+                    const newIsDone = inv.result != null || inv.output != null ||
+                        ['result', 'output-available', 'output-error'].includes(inv.state ?? '');
+                    if (!existingIsDone && newIsDone) {
+                        // Preserve toolName from call part if result part omits it (v6 static parts encode it in type)
+                        const rawType: string = tp.type ?? '';
+                        const toolNameFromType = (rawType.startsWith('tool-') && rawType !== 'tool-invocation')
+                            ? rawType.slice(5) : '';
+                        const resolvedToolName = tp.toolName || toolNameFromType || existingInv.toolName || '';
+                        const upgraded = { ...tp };
+                        if (!resolvedToolName) {
+                            // keep existing
+                        } else if (upgraded.toolInvocation) {
+                            upgraded.toolInvocation = { ...upgraded.toolInvocation, toolName: resolvedToolName };
                         } else {
-                            merged[idx] = tp;
+                            upgraded.toolName = resolvedToolName;
                         }
+                        merged[idx] = upgraded;
                         changed = true;
                     }
                 }
@@ -817,15 +824,19 @@ export default function ZeninhoChat() {
                                             (typeof part.type === 'string' && part.type.includes('tool'))
                                         ) {
                                             const p = part as any;
+                                            // v6 static tool parts encode toolName in type: "tool-generateImage" → "generateImage"
+                                            const rawType: string = p.type ?? '';
+                                            const toolNameFromType = (rawType.startsWith('tool-') && rawType !== 'tool-invocation' && rawType !== 'tool-call' && rawType !== 'tool-result')
+                                                ? rawType.slice(5) : '';
                                             const inv = p.toolInvocation ?? p;
-                                            // toolName may live on p directly (flat SDK parts) or inside toolInvocation
-                                            const toolName: string = p.toolName || p.toolInvocation?.toolName || inv.toolName || '';
+                                            const toolName: string = p.toolName || toolNameFromType || p.toolInvocation?.toolName || inv.toolName || '';
                                             const toolState: string = p.state || p.toolInvocation?.state || inv.state || '';
-                                            const toolArgs = p.args || p.toolInvocation?.args || inv.args || {};
-                                            const toolResult = p.result ?? p.toolInvocation?.result ?? inv.result ?? null;
+                                            // v6 uses `input`/`output`; v4 used `args`/`result`
+                                            const toolArgs = p.input ?? p.args ?? p.toolInvocation?.input ?? p.toolInvocation?.args ?? inv.input ?? inv.args ?? {};
+                                            const toolResult = p.output ?? p.result ?? p.toolInvocation?.output ?? p.toolInvocation?.result ?? inv.output ?? inv.result ?? null;
 
                                             // Show generated image inline from tool result
-                                            if (toolName === 'generateImage' && toolState === 'result' && toolResult?.imageUrl) {
+                                            if (toolName === 'generateImage' && (toolState === 'result' || toolState === 'output-available') && toolResult?.imageUrl) {
                                                 return (
                                                     <div key={index} className="mt-3">
                                                         <img src={toolResult.imageUrl} alt="Imagem gerada pelo Zeninho" className="rounded-xl max-w-full shadow-lg border border-stone-700/30" />
@@ -1138,7 +1149,7 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
     //   2. A result object exists (SDK sometimes skips the state update), OR
     //   3. The entire stream has finished — meaning no tool call can still be pending.
     // Note: use != (loose) so both null and undefined are treated as "no result".
-    const isDone = state === 'result' || result != null || !isStreaming;
+    const isDone = state === 'result' || state === 'output-available' || state === 'output-error' || result != null || !isStreaming;
 
     type ToolConfig = {
         icon: React.ReactNode;

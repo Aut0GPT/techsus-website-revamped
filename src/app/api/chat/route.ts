@@ -4,7 +4,7 @@ import { streamText, tool, stepCountIs, wrapLanguageModel } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
-export const maxDuration = 120;
+export const maxDuration = 800;
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -195,6 +195,7 @@ Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 - IMPORTANTÍSSIMO: Quando o tool retornar success:true, você DEVE incluir a imagem na sua resposta usando EXATAMENTE este formato markdown: ![Descrição da imagem](URL_DA_IMAGEM) — substitua URL_DA_IMAGEM pela imageUrl retornada pelo tool. Isso é OBRIGATÓRIO para a imagem aparecer no chat.
 - Após incluir a imagem em markdown, faça um breve comentário sobre ela.
 - Se o tool retornar success:false, informe o usuário do erro.
+- CRÍTICO: Gere UMA imagem por vez em etapas separadas. Nunca chame generateImage múltiplas vezes em paralelo na mesma etapa. Para uma apresentação de 3 slides: chame generateImage uma vez (slide 1), depois outra vez (slide 2), depois outra vez (slide 3) — cada chamada em sua própria etapa separada.
 
 ## Pesquisa na Web
 Você tem amplo conhecimento geral atualizado. Para perguntas sobre notícias, preços ou dados da web, use esse conhecimento diretamente. Só chame webSearch se o usuário pedir explicitamente uma pesquisa na web.
@@ -243,39 +244,117 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                 console.warn('  ⚠️  Skipping user message with no text or attachments');
             }
         } else if (message.role === 'assistant') {
-            if (message.toolInvocations && message.toolInvocations.length > 0) {
+            // Collect tool parts from all formats:
+            // - AI SDK v6 static:  type = "tool-{name}", fields: input, output, state
+            // - AI SDK v6 dynamic: type = "dynamic-tool", toolName, input, output, state
+            // - AI SDK v4 legacy:  type = "tool-invocation", toolInvocation: { toolName, args, result }
+            // - Legacy array:      message.toolInvocations (present in old saved messages)
+            const v6DoneStates = new Set(['output-available', 'output-error', 'result']);
+
+            const partsArr: any[] = message.parts ?? [];
+
+            const v6ToolParts = partsArr.filter((p: any) => {
+                const t: string = p?.type ?? '';
+                return (t.startsWith('tool-') || t === 'dynamic-tool') &&
+                    t !== 'tool-invocation' && t !== 'tool-call' && t !== 'tool-result';
+            });
+
+            const legacyToolParts = partsArr.filter((p: any) =>
+                p?.type === 'tool-invocation' || p?.type === 'tool-call'
+            );
+
+            const legacyInvocations: any[] = message.toolInvocations ?? [];
+
+            if (v6ToolParts.length > 0 || legacyToolParts.length > 0 || legacyInvocations.length > 0) {
                 const assistantContent: any[] = [];
-                if (message.content) {
-                    assistantContent.push({ type: 'text', text: message.content });
+
+                // Text content
+                const textFromParts = partsArr.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
+                const textValue = textFromParts || message.content || '';
+                if (textValue) assistantContent.push({ type: 'text', text: textValue });
+
+                // v6 tool calls
+                for (const p of v6ToolParts) {
+                    const rawType: string = p.type ?? '';
+                    const toolName = p.toolName || (rawType.startsWith('tool-') ? rawType.slice(5) : 'unknown');
+                    assistantContent.push({
+                        type: 'tool-call',
+                        toolCallId: p.toolCallId,
+                        toolName,
+                        args: p.input ?? p.args ?? {},
+                    });
                 }
-                for (const t of message.toolInvocations) {
+
+                // v4 legacy tool calls
+                for (const p of legacyToolParts) {
+                    const inv = p.toolInvocation ?? p;
+                    assistantContent.push({
+                        type: 'tool-call',
+                        toolCallId: inv.toolCallId,
+                        toolName: inv.toolName ?? 'unknown',
+                        args: inv.args ?? inv.input ?? {},
+                    });
+                }
+
+                // legacy toolInvocations array
+                for (const t of legacyInvocations) {
                     assistantContent.push({
                         type: 'tool-call',
                         toolCallId: t.toolCallId,
-                        toolName: t.toolName,
-                        args: t.args
+                        toolName: t.toolName ?? 'unknown',
+                        args: t.args ?? t.input ?? {},
                     });
                 }
-                coreMessages.push({ role: 'assistant', content: assistantContent });
 
-                const results = message.toolInvocations.filter((t: any) => 'result' in t);
-                if (results.length > 0) {
-                    coreMessages.push({
-                        role: 'tool',
-                        content: results.map((t: any) => ({
+                if (assistantContent.length > 0) {
+                    coreMessages.push({ role: 'assistant', content: assistantContent });
+                }
+
+                // Tool results
+                const toolResults: any[] = [];
+
+                for (const p of v6ToolParts) {
+                    if (v6DoneStates.has(p.state)) {
+                        const rawType: string = p.type ?? '';
+                        const toolName = p.toolName || (rawType.startsWith('tool-') ? rawType.slice(5) : 'unknown');
+                        toolResults.push({
+                            type: 'tool-result',
+                            toolCallId: p.toolCallId,
+                            toolName,
+                            result: p.output ?? p.result ?? null,
+                        });
+                    }
+                }
+
+                for (const p of legacyToolParts) {
+                    const inv = p.toolInvocation ?? p;
+                    if (inv.result != null || inv.output != null || v6DoneStates.has(inv.state)) {
+                        toolResults.push({
+                            type: 'tool-result',
+                            toolCallId: inv.toolCallId,
+                            toolName: inv.toolName ?? 'unknown',
+                            result: inv.result ?? inv.output ?? null,
+                        });
+                    }
+                }
+
+                for (const t of legacyInvocations) {
+                    if ('result' in t || 'output' in t) {
+                        toolResults.push({
                             type: 'tool-result',
                             toolCallId: t.toolCallId,
-                            toolName: t.toolName,
-                            result: t.result
-                        }))
-                    });
+                            toolName: t.toolName ?? 'unknown',
+                            result: t.result ?? t.output ?? null,
+                        });
+                    }
+                }
+
+                if (toolResults.length > 0) {
+                    coreMessages.push({ role: 'tool', content: toolResults });
                 }
             } else {
-                // Also check parts for text in new SDK format
-                const textFromParts = (message.parts ?? [])
-                    .filter((p: any) => p.type === 'text')
-                    .map((p: any) => p.text)
-                    .join('');
+                // Plain text assistant message
+                const textFromParts = partsArr.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
                 const textValue = textFromParts || message.content || '';
                 if (textValue) {
                     coreMessages.push({ role: 'assistant', content: textValue });
@@ -369,7 +448,7 @@ export async function POST(req: Request) {
             messages: coreMessages,
 
             // ── Phase 1 step control ──────────────────────────────────────────
-            stopWhen: stepCountIs(10),
+            stopWhen: stepCountIs(6),
 
             // On step >= 2 stop offering generateImage to prevent loops
             // Gemini uses grounding (not webSearch tool), ChatGPT uses webSearch tool
@@ -511,7 +590,7 @@ export async function POST(req: Request) {
                 generateImage: tool({
                     description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
                     inputSchema: z.object({
-                        prompt: z.string().optional().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
+                        prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
                         aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para fotos quadradas, 9:16 para stories/vertical.'),
                     }),
                     execute: async ({ prompt, aspectRatio = '16:9' }) => {
@@ -527,7 +606,7 @@ export async function POST(req: Request) {
 
                             console.log('  📡 Calling Gemini image API...');
                             const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+                            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
                             const response = await fetch(
                                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
                                 {
