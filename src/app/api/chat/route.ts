@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, tool, stepCountIs, wrapLanguageModel } from 'ai';
+import { streamText, tool, stepCountIs, wrapLanguageModel, generateImage as aiGenerateImage } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
@@ -192,8 +192,8 @@ Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 - O prompt do tool DEVE ser em portugues ou idioma que o usuário estiver usando e bem detalhado
 - Para slides/PowerPoint, use aspectRatio "16:9"
 - Para gráficos quadrados, use "1:1"
-- IMPORTANTÍSSIMO: Quando o tool retornar success:true, você DEVE incluir a imagem na sua resposta usando EXATAMENTE este formato markdown: ![Descrição da imagem](URL_DA_IMAGEM) — substitua URL_DA_IMAGEM pela imageUrl retornada pelo tool. Isso é OBRIGATÓRIO para a imagem aparecer no chat.
-- Após incluir a imagem em markdown, faça um breve comentário sobre ela.
+- Quando o tool retornar success:true, a imagem já aparece automaticamente no chat — NÃO inclua a URL nem markdown ![...]() da imagem na sua resposta de texto. Apenas faça um breve comentário sobre o que foi gerado.
+- Para imagens fotorrealistas, pessoas reais, ou quando o usuário pedir explicitamente ChatGPT/OpenAI, use generator:"openai". Para slides, diagramas e gráficos, use generator:"gemini" (padrão).
 - Se o tool retornar success:false, informe o usuário do erro.
 - CRÍTICO: Gere UMA imagem por vez em etapas separadas. Nunca chame generateImage múltiplas vezes em paralelo na mesma etapa. Para uma apresentação de 3 slides: chame generateImage uma vez (slide 1), depois outra vez (slide 2), depois outra vez (slide 3) — cada chamada em sua própria etapa separada.
 
@@ -204,7 +204,6 @@ Você tem amplo conhecimento geral atualizado. Para perguntas sobre notícias, p
 - Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments
 - Quando o usuário perguntar sobre informações atuais ou da web, use o tool webSearch
 - Quando o usuário pedir QUALQUER tipo de imagem → CHAME generateImage IMEDIATAMENTE
-- SEMPRE inclua a URL da imagem gerada como markdown ![desc](url) na sua resposta
 - Sempre responda de forma útil e completa`;
 
 const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
@@ -469,7 +468,7 @@ export async function POST(req: Request) {
             // ── Per-tool lifecycle logging ─────────────────────────────────────────────
             experimental_onToolCallStart(event: any) {
                 const name: string = event.toolCall?.toolName ?? 'unknown';
-                const argsPreview = JSON.stringify(event.toolCall?.args ?? {}).slice(0, 120);
+                const argsPreview = JSON.stringify(event.toolCall?.input ?? event.toolCall?.args ?? {}).slice(0, 120);
                 console.log(`\n  🔧 → ${name}  args: ${argsPreview}`);
             },
             experimental_onToolCallFinish(event: any) {
@@ -593,16 +592,64 @@ export async function POST(req: Request) {
                     inputSchema: z.object({
                         prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
                         aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para fotos quadradas, 9:16 para stories/vertical.'),
+                        generator: z.enum(['gemini', 'openai']).optional().default('gemini').describe('Qual gerador usar. Use "openai" para imagens fotorrealistas, pessoas reais, ou quando o usuário pedir explicitamente ChatGPT/OpenAI. Use "gemini" (padrão) para slides, diagramas, gráficos e ilustrações técnicas.'),
                     }),
-                    execute: async ({ prompt, aspectRatio = '16:9' }) => {
+                    execute: async ({ prompt, aspectRatio = '16:9', generator = 'gemini' }) => {
+                        if (!prompt) {
+                            return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
+                        }
+
+                        // ── Helper: upload base64 image to Supabase and return signed URL ────
+                        async function uploadToSupabase(base64: string, mimeType: string, prefix: string): Promise<string | null> {
+                            const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+                            const fileName = `${prefix}_${Date.now()}.${ext}`;
+                            const imageBuffer = Buffer.from(base64, 'base64');
+                            const { error: uploadError } = await supabase.storage
+                                .from('imagensgeradas')
+                                .upload(fileName, imageBuffer, { contentType: mimeType, upsert: false });
+                            if (uploadError) {
+                                console.error('  ❌ Supabase upload error:', uploadError.message);
+                                return null;
+                            }
+                            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                                .from('imagensgeradas')
+                                .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+                            if (signedUrlError || !signedUrlData?.signedUrl) return null;
+                            return signedUrlData.signedUrl;
+                        }
+
+                        // ── OpenAI gpt-image-1 via AI SDK ────────────────────────────────────
+                        if (generator === 'openai') {
+                            try {
+                                const oaiKey = process.env.OPENAI_API_KEY || process.env.openai_key || '';
+                                if (!oaiKey) return { success: false, message: 'Chave OpenAI não configurada.' };
+                                const oaiProvider = createOpenAI({ apiKey: oaiKey });
+                                const sizeMap: Record<string, '1024x1024' | '1536x1024' | '1024x1536'> = {
+                                    '16:9': '1536x1024', '9:16': '1024x1536',
+                                    '1:1': '1024x1024', '4:3': '1024x1024', '3:4': '1024x1024',
+                                };
+                                const size = sizeMap[aspectRatio] ?? '1024x1024';
+                                console.log(`  📡 Calling OpenAI image API (${size})...`);
+                                const result = await aiGenerateImage({
+                                    model: oaiProvider.image('gpt-image-1'),
+                                    prompt,
+                                    size,
+                                    abortSignal: AbortSignal.timeout(90000),
+                                });
+                                const signedUrl = await uploadToSupabase(result.image.base64, 'image/png', 'zeninho_oai');
+                                if (signedUrl) return { success: true, imageUrl: signedUrl, message: 'Imagem gerada com OpenAI!' };
+                                return { success: true, imageUrl: `data:image/png;base64,${result.image.base64}`, message: 'Imagem gerada (não salva no storage).' };
+                            } catch (err: any) {
+                                console.error('  ❌ OpenAI generateImage error:', err);
+                                return { success: false, message: `Erro na API OpenAI: ${err.message ?? 'desconhecido'}` };
+                            }
+                        }
+
+                        // ── Gemini imagen (default) ───────────────────────────────────────────
                         try {
                             const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
                             if (!apiKey) {
                                 return { success: false, message: 'Chave de API não configurada.' };
-                            }
-
-                            if (!prompt) {
-                                return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
                             }
 
                             console.log('  📡 Calling Gemini image API...');
@@ -635,29 +682,10 @@ export async function POST(req: Request) {
 
                             for (const part of parts) {
                                 if (part.inlineData) {
-                                    const ext = part.inlineData.mimeType === 'image/png' ? 'png' : 'jpg';
-                                    const fileName = `zeninho_${Date.now()}.${ext}`;
-
                                     try {
-                                        const imageBuffer = Buffer.from(part.inlineData.data, 'base64');
-                                        const { error: uploadError } = await supabase.storage
-                                            .from('imagensgeradas')
-                                            .upload(fileName, imageBuffer, { contentType: part.inlineData.mimeType, upsert: false });
-
-                                        if (uploadError) {
-                                            console.error('  ❌ Supabase upload error:', uploadError.message);
-                                            return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (não salva no storage).' };
-                                        }
-
-                                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                                            .from('imagensgeradas')
-                                            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-                                        if (signedUrlError || !signedUrlData?.signedUrl) {
-                                            return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (erro ao gerar URL).' };
-                                        }
-
-                                        return { success: true, imageUrl: signedUrlData.signedUrl, message: 'Imagem gerada e salva com sucesso!' };
+                                        const signedUrl = await uploadToSupabase(part.inlineData.data, part.inlineData.mimeType, 'zeninho');
+                                        if (signedUrl) return { success: true, imageUrl: signedUrl, message: 'Imagem gerada e salva com sucesso!' };
+                                        return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (não salva no storage).' };
                                     } catch (uploadErr) {
                                         console.error('  ❌ Upload exception:', uploadErr);
                                         return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (falha no storage).' };
@@ -671,7 +699,7 @@ export async function POST(req: Request) {
                         } catch (err: any) {
                             if (err.name === 'AbortError') {
                                 console.error('  ❌ generateImage timeout');
-                                return { success: false, message: 'A API de imagens excedeu o tempo limite (timeout de 30s).' };
+                                return { success: false, message: 'A API de imagens excedeu o tempo limite.' };
                             }
                             console.error('  ❌ generateImage exception:', err);
                             return { success: false, message: 'Erro ao gerar a imagem.' };

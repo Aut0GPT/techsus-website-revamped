@@ -837,12 +837,7 @@ export default function ZeninhoChat() {
 
                                             // Show generated image inline from tool result
                                             if (toolName === 'generateImage' && (toolState === 'result' || toolState === 'output-available') && toolResult?.imageUrl) {
-                                                return (
-                                                    <div key={index} className="mt-3">
-                                                        <img src={toolResult.imageUrl} alt="Imagem gerada pelo Zeninho" className="rounded-xl max-w-full shadow-lg border border-stone-700/30" />
-                                                        <DownloadImageButton url={toolResult.imageUrl} />
-                                                    </div>
-                                                );
+                                                return <GeneratedImageBlock key={index} initialUrl={toolResult.imageUrl} />;
                                             }
 
                                             return (
@@ -1108,6 +1103,83 @@ export default function ZeninhoChat() {
     );
 }
 
+// ── Helper: Generated image block (with download + edit) ─────────────────────
+
+function GeneratedImageBlock({ initialUrl }: { initialUrl: string }) {
+    const [imageUrl, setImageUrl] = useState(initialUrl);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editPrompt, setEditPrompt] = useState('');
+    const [isEditLoading, setIsEditLoading] = useState(false);
+    const [editError, setEditError] = useState('');
+
+    const handleEdit = async () => {
+        if (!editPrompt.trim() || isEditLoading) return;
+        setIsEditLoading(true);
+        setEditError('');
+        try {
+            const res = await fetch('/api/edit-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl, editPrompt: editPrompt.trim() }),
+            });
+            const data = await res.json();
+            if (data.success && data.imageUrl) {
+                setImageUrl(data.imageUrl);
+                setIsEditing(false);
+                setEditPrompt('');
+            } else {
+                setEditError(data.message ?? 'Erro ao editar.');
+            }
+        } catch {
+            setEditError('Erro de conexão.');
+        } finally {
+            setIsEditLoading(false);
+        }
+    };
+
+    return (
+        <div className="mt-3">
+            <img
+                src={imageUrl}
+                alt="Imagem gerada pelo Zeninho"
+                className="rounded-xl max-w-full shadow-lg border border-stone-700/30"
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+                <DownloadImageButton url={imageUrl} />
+                <button
+                    onClick={() => { setIsEditing(e => !e); setEditError(''); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-600/20 to-violet-500/10 hover:from-violet-600/40 hover:to-violet-500/20 border border-violet-500/30 hover:border-violet-400/50 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all duration-300 shadow-sm"
+                >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Editar Imagem
+                </button>
+            </div>
+            {isEditing && (
+                <div className="mt-3 space-y-2">
+                    <div className="flex gap-2 items-center">
+                        <input
+                            value={editPrompt}
+                            onChange={e => setEditPrompt(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleEdit(); }}
+                            placeholder="Descreva o que editar na imagem..."
+                            disabled={isEditLoading}
+                            className="flex-1 px-3 py-2 rounded-xl bg-stone-800/60 border border-stone-600/40 text-stone-200 text-sm placeholder:text-stone-500 focus:outline-none focus:border-violet-500/50 disabled:opacity-50"
+                        />
+                        <button
+                            onClick={handleEdit}
+                            disabled={isEditLoading || !editPrompt.trim()}
+                            className="px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all disabled:opacity-40 whitespace-nowrap"
+                        >
+                            {isEditLoading ? 'Editando...' : 'Aplicar'}
+                        </button>
+                    </div>
+                    {editError && <p className="text-xs text-red-400">{editError}</p>}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Helper: Download image button ─────────────────────────────────────────────
 
 function DownloadImageButton({ url }: { url: string }) {
@@ -1127,7 +1199,7 @@ function DownloadImageButton({ url }: { url: string }) {
                     URL.revokeObjectURL(blobUrl);
                 } catch { alert('Erro ao baixar imagem.'); }
             }}
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-600/20 to-orange-500/10 hover:from-orange-600/40 hover:to-orange-500/20 border border-orange-500/30 hover:border-orange-400/50 text-orange-300 hover:text-orange-200 text-xs font-medium transition-all duration-300 shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-600/20 to-orange-500/10 hover:from-orange-600/40 hover:to-orange-500/20 border border-orange-500/30 hover:border-orange-400/50 text-orange-300 hover:text-orange-200 text-xs font-medium transition-all duration-300 shadow-sm"
         >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Baixar imagem
