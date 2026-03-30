@@ -273,7 +273,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                 const textValue = textFromParts || message.content || '';
                 if (textValue) assistantContent.push({ type: 'text', text: textValue });
 
-                // v6 tool calls
+                // v6 tool calls (ToolCallPart uses `input`, not `args`)
                 for (const p of v6ToolParts) {
                     const rawType: string = p.type ?? '';
                     const toolName = p.toolName || (rawType.startsWith('tool-') ? rawType.slice(5) : 'unknown');
@@ -281,7 +281,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         type: 'tool-call',
                         toolCallId: p.toolCallId,
                         toolName,
-                        args: p.input ?? p.args ?? {},
+                        input: p.input ?? p.args ?? {},
                     });
                 }
 
@@ -292,7 +292,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         type: 'tool-call',
                         toolCallId: inv.toolCallId,
                         toolName: inv.toolName ?? 'unknown',
-                        args: inv.args ?? inv.input ?? {},
+                        input: inv.input ?? inv.args ?? {},
                     });
                 }
 
@@ -302,7 +302,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         type: 'tool-call',
                         toolCallId: t.toolCallId,
                         toolName: t.toolName ?? 'unknown',
-                        args: t.args ?? t.input ?? {},
+                        input: t.input ?? t.args ?? {},
                     });
                 }
 
@@ -313,6 +313,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                 // Tool results
                 const toolResults: any[] = [];
 
+                // ToolResultPart in v6 uses `output: { type: 'json', value: ... }`, not `result`
                 for (const p of v6ToolParts) {
                     if (v6DoneStates.has(p.state)) {
                         const rawType: string = p.type ?? '';
@@ -321,7 +322,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                             type: 'tool-result',
                             toolCallId: p.toolCallId,
                             toolName,
-                            result: p.output ?? p.result ?? null,
+                            output: { type: 'json', value: p.output ?? p.result ?? null },
                         });
                     }
                 }
@@ -333,7 +334,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                             type: 'tool-result',
                             toolCallId: inv.toolCallId,
                             toolName: inv.toolName ?? 'unknown',
-                            result: inv.result ?? inv.output ?? null,
+                            output: { type: 'json', value: inv.output ?? inv.result ?? null },
                         });
                     }
                 }
@@ -344,7 +345,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                             type: 'tool-result',
                             toolCallId: t.toolCallId,
                             toolName: t.toolName ?? 'unknown',
-                            result: t.result ?? t.output ?? null,
+                            output: { type: 'json', value: t.output ?? t.result ?? null },
                         });
                     }
                 }
