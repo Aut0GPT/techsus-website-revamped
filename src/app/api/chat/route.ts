@@ -3,6 +3,8 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, tool, stepCountIs, wrapLanguageModel } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
 export const maxDuration = 800;
 
@@ -10,6 +12,19 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
+
+// ─── TECHSUS logo (cached, read once from /public) ───────────────────────────
+let _logoBase64: string | null = undefined as any;
+function getLogoBase64(): string | null {
+    if (_logoBase64 !== undefined) return _logoBase64;
+    try {
+        const logoPath = path.join(process.cwd(), 'public/images/imagenscomdescricao/logo-techsus.png');
+        _logoBase64 = fs.readFileSync(logoPath).toString('base64');
+    } catch {
+        _logoBase64 = null;
+    }
+    return _logoBase64;
+}
 
 // ─── Simple LRU-ish embedding cache (avoids redundant API calls) ─────────────
 const embeddingCache = new Map<string, { embedding: number[]; ts: number }>();
@@ -189,12 +204,46 @@ A TECHSUS é um grupo de empresas voltadas à gestão e implantação de um sist
 ## Geração de Imagens — REGRA OBRIGATÓRIA
 Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
 ⚠️ REGRA ABSOLUTA: Quando o usuário pedir para criar, gerar, fazer ou desenhar qualquer tipo de imagem, ilustração, gráfico, chart, slide, PowerPoint ou conteúdo visual, você DEVE OBRIGATORIAMENTE chamar o tool generateImage. NUNCA descreva em texto uma imagem que deveria ser gerada. NUNCA finja que gerou uma imagem. Você DEVE usar o tool.
-- O prompt do tool DEVE ser em portugues ou idioma que o usuário estiver usando e bem detalhado
-- Para slides/PowerPoint, use aspectRatio "16:9"
-- Para gráficos quadrados, use "1:1"
-- Quando o tool retornar success:true, a imagem já aparece automaticamente no chat — NÃO inclua a URL nem markdown ![...]() da imagem na sua resposta de texto. Apenas faça um breve comentário sobre o que foi gerado.
-- Se o tool retornar success:false, informe o usuário do erro.
-- CRÍTICO: Gere UMA imagem por vez em etapas separadas. Nunca chame generateImage múltiplas vezes em paralelo na mesma etapa. Para uma apresentação de 3 slides: chame generateImage uma vez (slide 1), depois outra vez (slide 2), depois outra vez (slide 3) — cada chamada em sua própria etapa separada.
+- O prompt do tool DEVE ser em inglês e muito detalhado: descreva cores, layout, tipografia, estilo, composição.
+- Para gráficos quadrados ou imagens avulsas, use aspectRatio "1:1".
+- Quando o tool retornar success:true, a imagem já aparece automaticamente no chat — NÃO inclua a URL nem markdown ![...]() na sua resposta. Apenas comente brevemente o que foi gerado.
+- Se o tool retornar success:false, informe o erro ao usuário.
+- CRÍTICO: Gere UMA imagem por vez, em etapas separadas. Nunca chame generateImage múltiplas vezes em paralelo.
+
+## Apresentações PowerPoint — Workflow Obrigatório
+
+⚠️ QUANDO O USUÁRIO PEDIR UMA APRESENTAÇÃO, POWERPOINT OU CONJUNTO DE SLIDES, siga EXATAMENTE este workflow:
+
+### PASSO 1 — Perguntas obrigatórias (faça ANTES de qualquer geração)
+Em UMA única mensagem, pergunte:
+1. **Público-alvo**: Para quem é a apresentação? (ex: investidores, clientes, equipe interna, governo, construtoras)
+2. **Número de slides**: Quantos slides deseja? (mínimo 1, máximo 5 — padrão é 5 se não especificado)
+3. **Conteúdo e destaques**: Tem alguma mensagem, dado ou ponto específico que DEVE aparecer? (opcional — se não souber, você vai sugerir uma estrutura baseada no tema e nos documentos da empresa)
+
+### PASSO 2 — Planejamento interno antes de gerar
+Com as respostas em mãos, PENSE PROFUNDAMENTE sobre a apresentação inteira antes de começar:
+- Defina o título e mensagem-chave de cada slide
+- Escolha uma paleta de cores e estilo visual coerente com a identidade TECHSUS (azul corporativo, branco, laranja como destaque)
+- Planeje onde o logotipo da TECHSUS aparecerá em cada slide (padrão: canto inferior direito)
+- Decida a estrutura: capa → conteúdo → conteúdo → ... → conclusão/CTA
+
+### PASSO 3 — Geração sequencial com consistência visual
+
+**Slide 1 (Capa):**
+- NÃO passe referenceImageUrl
+- Prompt em inglês, muito detalhado: inclua o tema, público, estilo corporativo TECHSUS, logotipo em destaque, cores da marca (deep blue, white, orange accent)
+- Use aspectRatio "16:9"
+
+**Slides 2 em diante:**
+- SEMPRE passe o imageUrl retornado pelo slide anterior como \`referenceImageUrl\`
+- No prompt, mencione: "consistent visual style with the reference slide, same color palette, same layout grid, TECHSUS logo in bottom-right corner"
+- Isso garante coesão visual entre todos os slides
+
+**Regras absolutas:**
+- Gere UM slide por vez — aguarde o resultado antes de chamar o próximo
+- Use aspectRatio "16:9" em TODOS os slides
+- O logotipo da TECHSUS DEVE aparecer em todos os slides
+- Após gerar todos os slides, escreva um resumo do que foi criado (tema de cada slide, mensagem, sugestões de uso)
 
 ## Pesquisa na Web
 Você tem amplo conhecimento geral atualizado. Para perguntas sobre notícias, preços ou dados da web, use esse conhecimento diretamente. Só chame webSearch se o usuário pedir explicitamente uma pesquisa na web.
@@ -446,14 +495,13 @@ export async function POST(req: Request) {
             system: ZENINHO_SYSTEM_PROMPT,
             messages: coreMessages,
 
-            // ── Phase 1 step control ──────────────────────────────────────────
-            stopWhen: stepCountIs(6),
+            // ── Step control (max 5 slides + clarification + final text + buffer) ──
+            stopWhen: stepCountIs(10),
 
-            // On step >= 2 stop offering generateImage to prevent loops
-            // Gemini uses grounding (not webSearch tool), ChatGPT uses webSearch tool
+            // Allow generateImage up to step 7 (covers 5 slides across any conversation flow).
+            // After step 7, disable it to prevent runaway generation loops.
             prepareStep: async ({ stepNumber }) => {
-                if (stepNumber >= 2) {
-                    // Keep doc search available; ChatGPT also keeps webSearch
+                if (stepNumber >= 7) {
                     return {
                         activeTools: (modelContext === 'chatgpt'
                             ? ['searchDocuments', 'listDocuments', 'webSearch', 'getDateTime', 'calculateArea']
@@ -463,6 +511,15 @@ export async function POST(req: Request) {
                 }
                 return undefined;
             },
+
+            // ── Thinking mode (Gemini extended reasoning for complex tasks) ────
+            ...(modelContext !== 'chatgpt' ? {
+                providerOptions: {
+                    google: {
+                        thinkingConfig: { thinkingBudget: 8000 },
+                    },
+                },
+            } : {}),
 
             // ── Per-tool lifecycle logging ─────────────────────────────────────────────
             experimental_onToolCallStart(event: any) {
@@ -587,12 +644,13 @@ export async function POST(req: Request) {
                 }),
 
                 generateImage: tool({
-                    description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual que o usuário solicitar. Para PowerPoints, chame este tool uma vez por slide.',
+                    description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual. Para PowerPoints, chame este tool uma vez por slide, passando o imageUrl do slide anterior em referenceImageUrl para manter consistência visual.',
                     inputSchema: z.object({
-                        prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja específico sobre cores, layout, texto, e estilo visual.'),
-                        aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para fotos quadradas, 9:16 para stories/vertical.'),
+                        prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja muito específico sobre cores, layout, tipografia, estilo visual, composição e elementos.'),
+                        aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para imagens quadradas, 9:16 para vertical.'),
+                        referenceImageUrl: z.string().optional().describe('URL da imagem de referência gerada anteriormente. Use para slides 2+ de uma apresentação, para manter consistência visual com o slide anterior.'),
                     }),
-                    execute: async ({ prompt, aspectRatio = '16:9' }) => {
+                    execute: async ({ prompt, aspectRatio = '16:9', referenceImageUrl }) => {
                         if (!prompt) {
                             return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
                         }
@@ -600,7 +658,34 @@ export async function POST(req: Request) {
                             const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
                             if (!apiKey) return { success: false, message: 'Chave de API não configurada.' };
 
-                            console.log('  📡 Calling Gemini image API...');
+                            // ── Build multimodal parts array ──────────────────────────────
+                            const requestParts: any[] = [];
+
+                            // 1. TECHSUS logo (always included — helps Gemini incorporate it)
+                            const logoBase64 = getLogoBase64();
+                            if (logoBase64) {
+                                requestParts.push({ inlineData: { mimeType: 'image/png', data: logoBase64 } });
+                            }
+
+                            // 2. Reference image from previous slide (for visual consistency)
+                            if (referenceImageUrl) {
+                                try {
+                                    const refResponse = await fetch(referenceImageUrl);
+                                    if (refResponse.ok) {
+                                        const refBuffer = Buffer.from(await refResponse.arrayBuffer());
+                                        const refMime = refResponse.headers.get('content-type') || 'image/jpeg';
+                                        requestParts.push({ inlineData: { mimeType: refMime, data: refBuffer.toString('base64') } });
+                                        console.log('  🔗 Reference slide included for consistency');
+                                    }
+                                } catch {
+                                    console.warn('  ⚠️  Could not fetch reference image — continuing without it');
+                                }
+                            }
+
+                            // 3. Text prompt
+                            requestParts.push({ text: prompt });
+
+                            console.log(`  📡 Calling Gemini image API (${requestParts.length} part(s))...`);
                             const controller = new AbortController();
                             const timeoutId = setTimeout(() => controller.abort(), 60000);
                             const response = await fetch(
@@ -609,7 +694,7 @@ export async function POST(req: Request) {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                        contents: [{ parts: [{ text: prompt }] }],
+                                        contents: [{ parts: requestParts }],
                                         generationConfig: { responseModalities: ['Image', 'Text'] },
                                     }),
                                     signal: controller.signal,
