@@ -22,7 +22,9 @@
       "Bash(find:*)",
       "Bash(npm view:*)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebSearch"
     ],
     "deny": []
   }

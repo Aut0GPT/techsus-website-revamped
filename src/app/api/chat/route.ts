@@ -520,6 +520,13 @@ export async function POST(req: Request) {
             // ── Step control (max 5 slides + clarification + final text + buffer) ──
             stopWhen: stepCountIs(10),
 
+            // ── Dynamic thinking (Gemini only) ────────────────────────────────────
+            ...(modelContext !== 'chatgpt' ? {
+                providerOptions: {
+                    google: { thinkingConfig: { thinkingBudget: -1 } },
+                },
+            } : {}),
+
             // Allow generateImage up to step 7 (covers 5 slides across any conversation flow).
             // After step 7, disable it to prevent runaway generation loops.
             prepareStep: async ({ stepNumber }) => {

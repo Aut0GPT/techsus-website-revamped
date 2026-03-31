@@ -7,9 +7,10 @@ import {
     Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation,
     Paperclip, Mic, MicOff, X, Volume2, Cpu, Settings, Moon, Sun, Type,
     Check, MessageSquarePlus, Search, Globe, Clock, FolderOpen, Ruler, Zap,
-    LogOut, Trash2,
+    LogOut, Trash2, Users,
 } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -92,6 +93,7 @@ function sanitizeForStorage(messages: any[]): any[] {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function ZeninhoChat() {
+    const router = useRouter();
     const [aiModel, setAiModel] = useState<'gemini' | 'chatgpt'>('gemini');
 
     const { messages, sendMessage, status, setMessages } = useChat({
@@ -596,6 +598,20 @@ export default function ZeninhoChat() {
                             <div className="text-left">
                                 <span className="block font-medium text-xs">Alimentar o Zeninho</span>
                                 <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Ensine algo novo pra ele!</span>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => router.push('/zeninho/transcrever')}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm ${
+                                dm ? 'bg-stone-800/50 hover:bg-stone-800 border border-transparent text-stone-300 hover:text-white'
+                                   : 'bg-gray-100 hover:bg-gray-200 border border-transparent text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            <Users size={16} className="shrink-0" />
+                            <div className="text-left">
+                                <span className="block font-medium text-xs">Reunião</span>
+                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Transcrever em tempo real</span>
                             </div>
                         </button>
 
