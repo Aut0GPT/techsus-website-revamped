@@ -29,7 +29,7 @@ export async function describeImage(
                         { type: 'input_image', image_url: `data:${mimeType};base64,${imageBase64}` },
                     ],
                 }],
-                reasoning: { effort: 'minimal' },
+                reasoning: { effort: 'low' },
             }),
             signal: AbortSignal.timeout(60000),
         });
