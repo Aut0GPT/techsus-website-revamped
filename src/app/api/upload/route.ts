@@ -184,41 +184,6 @@ async function collectOfficeImages(
     return inputs;
 }
 
-/**
- * Render every page of a PDF to PNG and prepare IngestInput entries.
- */
-async function collectPdfPageImages(
-    buffer: Buffer,
-    documentId: string,
-    originalFilename: string,
-): Promise<IngestInput[]> {
-    try {
-        const { pdfToPng } = await import('pdf-to-png-converter');
-        const pages = await pdfToPng(buffer, { viewportScale: 1.5 });
-        const inputs: IngestInput[] = [];
-        for (const p of pages) {
-            if (!p?.content) continue;
-            const pageBuffer = Buffer.from(p.content);
-            const storagePath = `pdf/${documentId}/page-${p.pageNumber}.png`;
-            const signedUrl = await uploadAndSign(pageBuffer, storagePath, 'image/png');
-            if (!signedUrl) continue;
-            inputs.push({
-                buffer: pageBuffer,
-                mimeType: 'image/png',
-                source: 'pdf',
-                filename: `${originalFilename}::page-${p.pageNumber}.png`,
-                documentId,
-                imageUrl: signedUrl,
-                storagePath,
-            });
-        }
-        return inputs;
-    } catch (err: any) {
-        console.error('  ⚠ pdf-to-png-converter failed:', err?.message ?? err);
-        return [];
-    }
-}
-
 async function indexTextChunks(documentId: string, text: string): Promise<{ successCount: number; total: number }> {
     const chunks = chunkText(text);
     if (chunks.length === 0) return { successCount: 0, total: 0 };
@@ -338,8 +303,7 @@ export async function POST(req: Request) {
             return json({ error: 'Erro ao processar o arquivo. Verifique se não está corrompido.' }, 400);
         }
 
-        if (!text.trim() && kind !== 'pdf' && kind !== 'docx' && kind !== 'pptx') {
-            // Only hard-fail on empty text for formats that can't provide images
+        if (!text.trim() && kind !== 'docx' && kind !== 'pptx') {
             return json({ error: 'O arquivo está vazio ou não contém texto extraível.' }, 400);
         }
 
@@ -366,8 +330,6 @@ export async function POST(req: Request) {
                 inputs = await collectOfficeImages(officeZip, 'docx', doc.id, file.name);
             } else if (kind === 'pptx' && officeZip) {
                 inputs = await collectOfficeImages(officeZip, 'pptx', doc.id, file.name);
-            } else if (kind === 'pdf') {
-                inputs = await collectPdfPageImages(buffer, doc.id, file.name);
             }
 
             if (inputs.length > 0) {
