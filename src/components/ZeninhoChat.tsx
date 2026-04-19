@@ -129,6 +129,8 @@ export default function ZeninhoChat() {
     const [isListening, setIsListening] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [autoScroll, setAutoScroll] = useState(true);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const chatFileInputRef = useRef<HTMLInputElement>(null);
     const recognitionRef = useRef<any>(null);
@@ -232,10 +234,21 @@ export default function ZeninhoChat() {
         });
     }, [messages]);
 
-    // ── Scroll to bottom ──────────────────────────────────────────────────
+    // ── Auto-scroll to bottom (only if user hasn't scrolled up) ──────────
+    const handleMessagesScroll = useCallback(() => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setAutoScroll(distanceFromBottom < 120);
+    }, []);
+
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (!autoScroll) return;
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        // Instant scroll during streaming avoids fighting ongoing smooth animations.
+        el.scrollTop = el.scrollHeight;
+    }, [messages, autoScroll]);
 
     // ── Auto-resize textarea ──────────────────────────────────────────────
     useEffect(() => {
@@ -358,6 +371,7 @@ export default function ZeninhoChat() {
 
     const handleSend = () => {
         if ((!input.trim() && !chatFiles) || isLoading) return;
+        setAutoScroll(true);
         sendMessage({
             text: input || (chatFiles ? 'Analise este arquivo.' : ''),
             files: chatFiles,
@@ -674,7 +688,7 @@ export default function ZeninhoChat() {
                     </div>
 
                     {/* Messages */}
-                    <div className={`flex-1 overflow-y-auto px-4 py-6 space-y-6`}>
+                    <div ref={scrollContainerRef} onScroll={handleMessagesScroll} className={`flex-1 overflow-y-auto overscroll-contain px-4 py-6 space-y-6`}>
 
                         {/* Empty state */}
                         {messages.length === 0 && (
