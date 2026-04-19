@@ -1,6 +1,11 @@
+import { requireUser } from '@/lib/supabase/server';
+
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+    const { response: authErr } = await requireUser();
+    if (authErr) return authErr;
+
     try {
         const formData = await req.formData();
         const audio = formData.get('audio') as File;
@@ -9,7 +14,7 @@ export async function POST(req: Request) {
             return Response.json({ error: 'no audio file provided' }, { status: 400 });
         }
 
-        const apiKey = process.env.openai_key || process.env.OPENAI_API_KEY;
+        const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
             return Response.json({ error: 'OpenAI API key not configured' }, { status: 500 });
         }

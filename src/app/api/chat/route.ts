@@ -1,12 +1,13 @@
-import { google } from '@ai-sdk/google';
-import { createOpenAI } from '@ai-sdk/openai';
+import { openai } from '@ai-sdk/openai';
 import { streamText, tool, stepCountIs, wrapLanguageModel } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { embedQuery } from '@/lib/embeddings';
+import { requireUser } from '@/lib/supabase/server';
 
-export const maxDuration = 800;
+export const maxDuration = 180;
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -26,68 +27,12 @@ function getLogoBase64(): string | null {
     return _logoBase64;
 }
 
-// ─── Simple LRU-ish embedding cache (avoids redundant API calls) ─────────────
-const embeddingCache = new Map<string, { embedding: number[]; ts: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const CACHE_MAX = 50;
-
-function getCachedEmbedding(key: string): number[] | null {
-    const entry = embeddingCache.get(key);
-    if (!entry) return null;
-    if (Date.now() - entry.ts > CACHE_TTL) {
-        embeddingCache.delete(key);
-        return null;
-    }
-    return entry.embedding;
-}
-
-function setCachedEmbedding(key: string, embedding: number[]) {
-    if (embeddingCache.size >= CACHE_MAX) {
-        // Evict oldest
-        const oldest = embeddingCache.keys().next().value;
-        if (oldest) embeddingCache.delete(oldest);
-    }
-    embeddingCache.set(key, { embedding, ts: Date.now() });
-}
-
-// ─── Embed helper (shared between tool + middleware) ─────────────────────────
-async function embedQuery(text: string): Promise<number[] | null> {
-    // Check cache first
-    const cached = getCachedEmbedding(text);
-    if (cached) {
-        console.log('  ⚡ Embedding cache HIT');
-        return cached;
-    }
-
-    const t0 = Date.now();
-    const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: { parts: [{ text }] },
-                taskType: 'RETRIEVAL_QUERY',
-                outputDimensionality: 768,
-            }),
-        }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const embedding = data.embedding?.values ?? null;
-    console.log(`  ⏱  Embedding generated in ${Date.now() - t0}ms`);
-
-    if (embedding) setCachedEmbedding(text, embedding);
-    return embedding;
-}
-
 // ─── Hybrid search (vector + full-text, falls back to vector-only) ───────────
 async function hybridSearch(query: string, matchCount = 5) {
     const t0 = Date.now();
     const embedding = await embedQuery(query);
     if (!embedding) return { data: null, error: 'embedding failed' };
 
-    // Try hybrid_search first (requires the SQL function to exist)
     const hybrid = await supabase.rpc('hybrid_search', {
         query_text: query,
         query_embedding: embedding,
@@ -99,7 +44,6 @@ async function hybridSearch(query: string, matchCount = 5) {
         return { data: hybrid.data, error: null };
     }
 
-    // Fallback: pure vector search (lower threshold to get results)
     console.log('  🔍 Falling back to vector-only search');
     const vector = await supabase.rpc('match_documents', {
         query_embedding: embedding,
@@ -111,7 +55,6 @@ async function hybridSearch(query: string, matchCount = 5) {
 }
 
 // ─── RAG middleware — auto-injects document context into every request ────────
-// Trivial messages that should skip RAG entirely
 const SKIP_RAG_PATTERNS = /^(oi|olá|ola|hey|hi|hello|obrigado|obg|valeu|tchau|bye|ok|sim|não|nao|haha|kk|rsrs|\?|!)/i;
 
 function createRagMiddleware() {
@@ -119,7 +62,6 @@ function createRagMiddleware() {
         specificationVersion: 'v3' as const,
         async transformParams({ params }: { params: any }) {
             try {
-                // Get the last user message text
                 const lastUser = [...(params.messages ?? [])].reverse().find((m: any) => m.role === 'user');
                 if (!lastUser) return params;
 
@@ -129,13 +71,11 @@ function createRagMiddleware() {
 
                 const trimmed = text.trim();
 
-                // Skip RAG for short or trivial messages
                 if (!trimmed || trimmed.length < 40 || SKIP_RAG_PATTERNS.test(trimmed)) {
                     console.log('  ⏭️  RAG middleware: skipped (trivial/short message)');
                     return params;
                 }
 
-                // Fetch top 2 relevant chunks with a 3s timeout
                 const t0 = Date.now();
                 const controller = new AbortController();
                 const timer = setTimeout(() => controller.abort(), 3000);
@@ -169,7 +109,7 @@ function createRagMiddleware() {
                     return params;
                 }
             } catch {
-                return params; // never break the request
+                return params;
             }
         },
     };
@@ -268,11 +208,10 @@ Com o plano aprovado, GERE OS SLIDES UM A UM. Nunca em paralelo.
 - Após gerar todos os slides, escreva um resumo conciso: título de cada slide, mensagem principal, e uma dica de como usar a apresentação
 
 ## Pesquisa na Web
-Você tem amplo conhecimento geral atualizado. Para perguntas sobre notícias, preços ou dados da web, use esse conhecimento diretamente. Só chame webSearch se o usuário pedir explicitamente uma pesquisa na web.
+Você tem acesso a uma ferramenta web_search nativa do modelo. Use-a quando o usuário pedir informações atuais, notícias, preços de mercado, dados sobre empresas, ou qualquer coisa que não esteja nos documentos internos. Não precisa avisar antes de pesquisar.
 
 ## Instruções
 - Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments
-- Quando o usuário perguntar sobre informações atuais ou da web, use o tool webSearch
 - Quando o usuário pedir QUALQUER tipo de imagem → CHAME generateImage IMEDIATAMENTE
 - Sempre responda de forma útil e completa`;
 
@@ -282,8 +221,6 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
         if (message.role === 'user') {
             const content: any[] = [];
 
-            // New AI SDK UIMessage format: text lives in message.parts[]
-            // Legacy format: text lives in message.content (string)
             const textFromParts = (message.parts ?? [])
                 .filter((p: any) => p.type === 'text')
                 .map((p: any) => p.text)
@@ -313,11 +250,6 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                 console.warn('  ⚠️  Skipping user message with no text or attachments');
             }
         } else if (message.role === 'assistant') {
-            // Collect tool parts from all formats:
-            // - AI SDK v6 static:  type = "tool-{name}", fields: input, output, state
-            // - AI SDK v6 dynamic: type = "dynamic-tool", toolName, input, output, state
-            // - AI SDK v4 legacy:  type = "tool-invocation", toolInvocation: { toolName, args, result }
-            // - Legacy array:      message.toolInvocations (present in old saved messages)
             const v6DoneStates = new Set(['output-available', 'output-error', 'result']);
 
             const partsArr: any[] = message.parts ?? [];
@@ -337,12 +269,10 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
             if (v6ToolParts.length > 0 || legacyToolParts.length > 0 || legacyInvocations.length > 0) {
                 const assistantContent: any[] = [];
 
-                // Text content
                 const textFromParts = partsArr.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
                 const textValue = textFromParts || message.content || '';
                 if (textValue) assistantContent.push({ type: 'text', text: textValue });
 
-                // v6 tool calls (ToolCallPart uses `input`, not `args`)
                 for (const p of v6ToolParts) {
                     const rawType: string = p.type ?? '';
                     const toolName = p.toolName || (rawType.startsWith('tool-') ? rawType.slice(5) : 'unknown');
@@ -354,7 +284,6 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     });
                 }
 
-                // v4 legacy tool calls
                 for (const p of legacyToolParts) {
                     const inv = p.toolInvocation ?? p;
                     assistantContent.push({
@@ -365,7 +294,6 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     });
                 }
 
-                // legacy toolInvocations array
                 for (const t of legacyInvocations) {
                     assistantContent.push({
                         type: 'tool-call',
@@ -379,10 +307,8 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     coreMessages.push({ role: 'assistant', content: assistantContent });
                 }
 
-                // Tool results
                 const toolResults: any[] = [];
 
-                // ToolResultPart in v6 uses `output: { type: 'json', value: ... }`, not `result`
                 for (const p of v6ToolParts) {
                     if (v6DoneStates.has(p.state)) {
                         const rawType: string = p.type ?? '';
@@ -423,7 +349,6 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     coreMessages.push({ role: 'tool', content: toolResults });
                 }
             } else {
-                // Plain text assistant message
                 const textFromParts = partsArr.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
                 const textValue = textFromParts || message.content || '';
                 if (textValue) {
@@ -437,7 +362,6 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     return coreMessages;
 };
 
-// ─── Strip messages with empty content (Gemini rejects empty parts) ──────────
 function sanitizeMessages(messages: any[]): any[] {
     return messages.filter(m => {
         if (typeof m.content === 'string') return m.content.trim().length > 0;
@@ -446,7 +370,6 @@ function sanitizeMessages(messages: any[]): any[] {
     });
 }
 
-// ─── Logger ──────────────────────────────────────────────────────────────────
 const sep = (char = '─', len = 72) => char.repeat(len);
 
 function logRequest(modelId: string, messages: any[]) {
@@ -477,25 +400,149 @@ function logFinish(usage: any, steps: number, ms: number) {
     console.log(`  ⏱  ${ms}ms  │  ${steps} step(s)  │  tokens: prompt=${usage?.promptTokens ?? '?'} completion=${usage?.completionTokens ?? '?'} total=${usage?.totalTokens ?? '?'}`);
     console.log(sep('═') + '\n');
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
+// ─── OpenAI image helpers ────────────────────────────────────────────────────
+const OPENAI_IMAGE_MODEL = 'gpt-image-1.5';
+
+function mapAspectRatioToSize(aspectRatio: string): string {
+    switch (aspectRatio) {
+        case '16:9':
+        case '4:3':
+            return '1536x1024';
+        case '9:16':
+        case '3:4':
+            return '1024x1536';
+        case '1:1':
+        default:
+            return '1024x1024';
+    }
+}
+
+async function callOpenAiImageGenerate(prompt: string, size: string): Promise<{ b64: string; mime: string } | { error: string }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    try {
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: OPENAI_IMAGE_MODEL,
+                prompt,
+                size,
+                quality: 'high',
+            }),
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error('  ❌ OpenAI image generate error:', res.status, errText.slice(0, 200));
+            return { error: `Erro na API de imagens: ${res.status}` };
+        }
+        const data = await res.json();
+        const b64: string | undefined = data.data?.[0]?.b64_json;
+        if (!b64) return { error: 'A API não retornou imagem.' };
+        return { b64, mime: 'image/png' };
+    } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') return { error: 'A API de imagens excedeu o tempo limite.' };
+        return { error: err.message ?? 'Erro desconhecido ao gerar imagem.' };
+    }
+}
+
+async function callOpenAiImageEdit(
+    prompt: string,
+    size: string,
+    logoBase64: string | null,
+    referenceImageUrl?: string,
+): Promise<{ b64: string; mime: string } | { error: string }> {
+    const fd = new FormData();
+    fd.append('model', OPENAI_IMAGE_MODEL);
+    fd.append('prompt', prompt);
+    fd.append('size', size);
+    fd.append('quality', 'high');
+
+    if (logoBase64) {
+        const logoBuffer = Buffer.from(logoBase64, 'base64');
+        fd.append('image[]', new Blob([logoBuffer as any], { type: 'image/png' }), 'logo.png');
+    }
+    if (referenceImageUrl) {
+        try {
+            const refRes = await fetch(referenceImageUrl);
+            if (refRes.ok) {
+                const refBuffer = Buffer.from(await refRes.arrayBuffer());
+                const refMime = refRes.headers.get('content-type') || 'image/png';
+                const refExt = refMime.includes('png') ? 'png' : 'jpg';
+                fd.append('image[]', new Blob([refBuffer as any], { type: refMime }), `ref.${refExt}`);
+                console.log('  🔗 Reference slide included for consistency');
+            }
+        } catch {
+            console.warn('  ⚠️  Could not fetch reference image — continuing without it');
+        }
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    try {
+        const res = await fetch('https://api.openai.com/v1/images/edits', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+            body: fd,
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error('  ❌ OpenAI image edit error:', res.status, errText.slice(0, 200));
+            return { error: `Erro na API de imagens: ${res.status}` };
+        }
+        const data = await res.json();
+        const b64: string | undefined = data.data?.[0]?.b64_json;
+        if (!b64) return { error: 'A API não retornou imagem.' };
+        return { b64, mime: 'image/png' };
+    } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') return { error: 'A API de imagens excedeu o tempo limite.' };
+        return { error: err.message ?? 'Erro desconhecido ao editar imagem.' };
+    }
+}
+
+async function uploadGeneratedImageToStorage(b64: string, mime: string, prefix = 'zeninho'): Promise<{ url: string; persisted: boolean }> {
+    const ext = mime === 'image/png' ? 'png' : 'jpg';
+    const fileName = `${prefix}_${Date.now()}.${ext}`;
+    const buffer = Buffer.from(b64, 'base64');
+    const { error: uploadError } = await supabase.storage
+        .from('imagensgeradas')
+        .upload(fileName, buffer, { contentType: mime, upsert: false });
+    if (uploadError) {
+        console.error('  ❌ Supabase upload error:', uploadError.message);
+        return { url: `data:${mime};base64,${b64}`, persisted: false };
+    }
+    const { data: signed, error: signedErr } = await supabase.storage
+        .from('imagensgeradas')
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+    if (signedErr || !signed?.signedUrl) {
+        return { url: `data:${mime};base64,${b64}`, persisted: false };
+    }
+    return { url: signed.signedUrl, persisted: true };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export async function POST(req: Request) {
     const t0 = Date.now();
+
+    const { user, response: authErr } = await requireUser();
+    if (authErr) return authErr;
+
     try {
-        const url = new URL(req.url);
-        const modelContext = url.searchParams.get('model') || 'gemini';
         const { messages }: { messages: any[] } = await req.json();
 
-        const customOpenai = createOpenAI({ apiKey: process.env.openai_key || '' });
+        const modelId = 'gpt-5.4';
+        const baseModel = openai.responses(modelId);
 
-        const modelId = modelContext === 'chatgpt' ? 'gpt-4o-mini-search-preview' : 'gemini-3-flash-preview';
-        // ChatGPT: use Responses API (has built-in web search)
-        // Gemini: use standard chat completions (search via providerOptions grounding)
-        const baseModel = modelContext === 'chatgpt'
-            ? customOpenai.responses(modelId)
-            : google(modelId);
-
-        // Wrap model with RAG middleware (auto-injects relevant doc context)
         const aiModel = wrapLanguageModel({
             model: baseModel,
             middleware: createRagMiddleware(),
@@ -517,31 +564,24 @@ export async function POST(req: Request) {
             system: ZENINHO_SYSTEM_PROMPT,
             messages: coreMessages,
 
-            // ── Step control (max 5 slides + clarification + final text + buffer) ──
             stopWhen: stepCountIs(10),
 
-            // ── Dynamic thinking (Gemini only) ────────────────────────────────────
-            ...(modelContext !== 'chatgpt' ? {
-                providerOptions: {
-                    google: { thinkingConfig: { thinkingBudget: -1 } },
+            providerOptions: {
+                openai: {
+                    reasoningEffort: 'medium',
+                    reasoningSummary: 'auto',
                 },
-            } : {}),
+            },
 
-            // Allow generateImage up to step 7 (covers 5 slides across any conversation flow).
-            // After step 7, disable it to prevent runaway generation loops.
             prepareStep: async ({ stepNumber }) => {
                 if (stepNumber >= 7) {
                     return {
-                        activeTools: (modelContext === 'chatgpt'
-                            ? ['searchDocuments', 'listDocuments', 'webSearch', 'getDateTime', 'calculateArea']
-                            : ['searchDocuments', 'listDocuments', 'getDateTime', 'calculateArea']
-                        ) as any,
+                        activeTools: ['searchDocuments', 'listDocuments', 'web_search', 'getDateTime', 'calculateArea'] as any,
                     };
                 }
                 return undefined;
             },
 
-            // ── Per-tool lifecycle logging ─────────────────────────────────────────────
             experimental_onToolCallStart(event: any) {
                 const name: string = event.toolCall?.toolName ?? 'unknown';
                 const argsPreview = JSON.stringify(event.toolCall?.input ?? event.toolCall?.args ?? {}).slice(0, 120);
@@ -564,7 +604,7 @@ export async function POST(req: Request) {
                     summary = `${output?.documents?.length ?? 0} doc(s)`;
                 } else if (name === 'generateImage') {
                     summary = output?.success ? `✅ ${String(output.imageUrl ?? '').slice(0, 60)}…` : `❌ ${output?.message}`;
-                } else if (name === 'webSearch') {
+                } else if (name === 'web_search') {
                     summary = `${output?.results?.length ?? 0} web result(s)`;
                 } else {
                     summary = JSON.stringify(output).slice(0, 100);
@@ -572,8 +612,9 @@ export async function POST(req: Request) {
                 console.log(`  ✅ ← ${name}  ${ms}ms  │  ${summary}`);
             },
 
-            // ── Tools ─────────────────────────────────────────────────────────
             tools: {
+                web_search: openai.tools.webSearch({ searchContextSize: 'medium' }) as any,
+
                 searchDocuments: tool({
                     description: 'Busca documentos relevantes na base de conhecimento da TECHSUS usando busca híbrida (semântica + palavras-chave). Use quando o usuário perguntar sobre documentos, processos, especificações técnicas, patentes ou qualquer informação que possa estar nos documentos da empresa.',
                     inputSchema: z.object({
@@ -651,133 +692,39 @@ export async function POST(req: Request) {
                     },
                 }),
 
-                // webSearch tool — only used by ChatGPT (Gemini uses google.tools.googleSearch natively)
-                webSearch: tool({
-                    description: 'Pesquisa informações atuais na internet. Use para notícias, dados de mercado, preços, informações sobre empresas, eventos recentes, ou qualquer coisa não coberta pelos documentos internos.',
-                    inputSchema: z.object({
-                        query: z.string().describe('Termo de busca em português ou inglês'),
-                    }),
-                    execute: async ({ query }) => {
-                        console.log(`  🌐 webSearch (ChatGPT tool): "${query}"`);
-                        return { query, message: 'Pesquisa delegada ao modelo de busca integrado.' };
-                    },
-                }),
-
                 generateImage: tool({
-                    description: 'Gera uma imagem a partir de uma descrição textual. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual. Para PowerPoints, chame este tool uma vez por slide, passando o imageUrl do slide anterior em referenceImageUrl para manter consistência visual.',
+                    description: 'Gera uma imagem a partir de uma descrição textual usando OpenAI gpt-image-1.5. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual. Para PowerPoints, chame este tool uma vez por slide, passando o imageUrl do slide anterior em referenceImageUrl para manter consistência visual.',
                     inputSchema: z.object({
                         prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja muito específico sobre cores, layout, tipografia, estilo visual, composição e elementos.'),
                         aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para imagens quadradas, 9:16 para vertical.'),
                         referenceImageUrl: z.string().optional().describe('URL da imagem de referência gerada anteriormente. Use para slides 2+ de uma apresentação, para manter consistência visual com o slide anterior.'),
                     }),
                     execute: async ({ prompt, aspectRatio = '16:9', referenceImageUrl }) => {
-                        if (!prompt) {
-                            return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
-                        }
-                        try {
-                            const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-                            if (!apiKey) return { success: false, message: 'Chave de API não configurada.' };
+                        if (!prompt) return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
+                        if (!process.env.OPENAI_API_KEY) return { success: false, message: 'Chave de API não configurada.' };
 
-                            // ── Build multimodal parts array ──────────────────────────────
-                            const requestParts: any[] = [];
+                        const size = mapAspectRatioToSize(aspectRatio);
+                        const logoBase64 = getLogoBase64();
 
-                            // 1. TECHSUS logo (always included — helps Gemini incorporate it)
-                            const logoBase64 = getLogoBase64();
-                            if (logoBase64) {
-                                requestParts.push({ inlineData: { mimeType: 'image/png', data: logoBase64 } });
-                            }
+                        console.log(`  📡 Calling OpenAI image API (${referenceImageUrl ? 'edit' : 'generate'}, ${size})...`);
 
-                            // 2. Reference image from previous slide (for visual consistency)
-                            if (referenceImageUrl) {
-                                try {
-                                    const refResponse = await fetch(referenceImageUrl);
-                                    if (refResponse.ok) {
-                                        const refBuffer = Buffer.from(await refResponse.arrayBuffer());
-                                        const refMime = refResponse.headers.get('content-type') || 'image/jpeg';
-                                        requestParts.push({ inlineData: { mimeType: refMime, data: refBuffer.toString('base64') } });
-                                        console.log('  🔗 Reference slide included for consistency');
-                                    }
-                                } catch {
-                                    console.warn('  ⚠️  Could not fetch reference image — continuing without it');
-                                }
-                            }
+                        const result = referenceImageUrl
+                            ? await callOpenAiImageEdit(prompt, size, logoBase64, referenceImageUrl)
+                            : logoBase64
+                                ? await callOpenAiImageEdit(prompt, size, logoBase64, undefined)
+                                : await callOpenAiImageGenerate(prompt, size);
 
-                            // 3. Text prompt
-                            requestParts.push({ text: prompt });
+                        if ('error' in result) return { success: false, message: result.error };
 
-                            console.log(`  📡 Calling Gemini image API (${requestParts.length} part(s))...`);
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 60000);
-                            const response = await fetch(
-                                `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
-                                {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        contents: [{ parts: requestParts }],
-                                        generationConfig: { responseModalities: ['Image', 'Text'] },
-                                    }),
-                                    signal: controller.signal,
-                                }
-                            );
-                            clearTimeout(timeoutId);
-
-                            if (!response.ok) {
-                                const errText = await response.text();
-                                console.error('  ❌ Gemini image API error:', response.status, errText.slice(0, 200));
-                                return { success: false, message: `Erro na API: ${response.status}. Tente novamente.` };
-                            }
-
-                            const data = await response.json();
-                            const parts = data.candidates?.[0]?.content?.parts || [];
-                            const partTypes = parts.map((p: any) => p.inlineData ? 'image' : 'text').join(', ');
-                            console.log(`  📦 Parts: ${parts.length} (${partTypes})`);
-
-                            for (const part of parts) {
-                                if (part.inlineData) {
-                                    try {
-                                        const ext = part.inlineData.mimeType === 'image/png' ? 'png' : 'jpg';
-                                        const fileName = `zeninho_${Date.now()}.${ext}`;
-                                        const imageBuffer = Buffer.from(part.inlineData.data, 'base64');
-                                        const { error: uploadError } = await supabase.storage
-                                            .from('imagensgeradas')
-                                            .upload(fileName, imageBuffer, { contentType: part.inlineData.mimeType, upsert: false });
-                                        if (uploadError) {
-                                            console.error('  ❌ Supabase upload error:', uploadError.message);
-                                            return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (não salva no storage).' };
-                                        }
-                                        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-                                            .from('imagensgeradas')
-                                            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-                                        if (signedUrlError || !signedUrlData?.signedUrl) {
-                                            return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (erro ao gerar URL).' };
-                                        }
-                                        return { success: true, imageUrl: signedUrlData.signedUrl, message: 'Imagem gerada e salva com sucesso!' };
-                                    } catch (uploadErr) {
-                                        console.error('  ❌ Upload exception:', uploadErr);
-                                        return { success: true, imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, message: 'Imagem gerada (falha no storage).' };
-                                    }
-                                }
-                            }
-
-                            const textParts = parts.filter((p: { text?: string }) => p.text);
-                            if (textParts.length > 0) console.log('  ⚠️  Only text returned:', textParts[0].text?.slice(0, 100));
-                            return { success: false, message: 'A API retornou texto em vez de imagem.' };
-                        } catch (err: any) {
-                            if (err.name === 'AbortError') {
-                                console.error('  ❌ generateImage timeout');
-                                return { success: false, message: 'A API de imagens excedeu o tempo limite.' };
-                            }
-                            console.error('  ❌ generateImage exception:', err);
-                            return { success: false, message: 'Erro ao gerar a imagem.' };
-                        }
+                        const { url, persisted } = await uploadGeneratedImageToStorage(result.b64, result.mime);
+                        return {
+                            success: true,
+                            imageUrl: url,
+                            message: persisted ? 'Imagem gerada e salva com sucesso!' : 'Imagem gerada (não persistida).',
+                        };
                     },
                 }),
             },
-
-            // Gemini uses google.tools.googleSearch() (declared in tools above) —
-            // on-demand Google Search, only called when the model decides it needs it.
-            // This avoids the 20-30s overhead of always-on useSearchGrounding.
 
             onStepFinish({ stepNumber, text, toolCalls, finishReason, usage }) {
                 const toolNames = toolCalls?.map(tc => tc?.toolName ?? 'unknown').join(', ') || 'none';

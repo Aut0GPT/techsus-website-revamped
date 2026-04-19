@@ -5,8 +5,8 @@ import { DefaultChatTransport } from 'ai';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation,
-    Paperclip, Mic, MicOff, X, Volume2, Cpu, Settings, Moon, Sun, Type,
-    Check, MessageSquarePlus, Search, Globe, Clock, FolderOpen, Ruler, Zap,
+    Paperclip, Mic, MicOff, X, Volume2, Settings, Moon, Sun, Type,
+    MessageSquarePlus, Search, Globe, Clock, FolderOpen, Ruler, Zap,
     LogOut, Trash2, Users,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -28,7 +28,6 @@ declare global {
 interface ConversationSummary {
     id: string;
     title: string;
-    model: string;
     updated_at: string;
 }
 
@@ -94,11 +93,10 @@ function sanitizeForStorage(messages: any[]): any[] {
 
 export default function ZeninhoChat() {
     const router = useRouter();
-    const [aiModel, setAiModel] = useState<'gemini' | 'chatgpt'>('gemini');
 
     const { messages, sendMessage, status, setMessages } = useChat({
         transport: new DefaultChatTransport({
-            api: `/api/chat?model=${aiModel}`,
+            api: '/api/chat',
         }),
     });
 
@@ -117,7 +115,7 @@ export default function ZeninhoChat() {
     const [input, setInput] = useState('');
     const [showUpload, setShowUpload] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [settingsTab, setSettingsTab] = useState<'geral' | 'aparencia' | 'ia' | 'som'>('geral');
+    const [settingsTab, setSettingsTab] = useState<'geral' | 'aparencia' | 'som'>('geral');
     const [darkMode, setDarkMode] = useState(true);
     const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
     const [soundEnabled, setSoundEnabled] = useState(true);
@@ -255,7 +253,7 @@ export default function ZeninhoChat() {
         const supabase = createBrowserSupabaseClient();
         const { data } = await supabase
             .from('conversations')
-            .select('id, title, model, updated_at')
+            .select('id, title, updated_at')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false })
             .limit(60);
@@ -302,7 +300,7 @@ export default function ZeninhoChat() {
             } else {
                 const { data } = await supabase
                     .from('conversations')
-                    .insert({ user_id: userId, title, model: aiModel, messages: stored })
+                    .insert({ user_id: userId, title, messages: stored })
                     .select('id')
                     .single();
                 if (data?.id) setCurrentConversationId(data.id);
@@ -318,12 +316,11 @@ export default function ZeninhoChat() {
         const supabase = createBrowserSupabaseClient();
         const { data } = await supabase
             .from('conversations')
-            .select('messages, model')
+            .select('messages')
             .eq('id', conv.id)
             .single();
         if (data) {
             setCurrentConversationId(conv.id);
-            setAiModel((data.model as 'gemini' | 'chatgpt') ?? 'gemini');
             toolCacheRef.current = {};
             setMessages(data.messages ?? []);
         }
@@ -404,7 +401,6 @@ export default function ZeninhoChat() {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('title', file.name);
-            formData.append('authCode', localStorage.getItem('zeninho-auth') || userEmail);
             const response = await fetch('/api/upload', { method: 'POST', body: formData });
             const data = await response.json();
             setUploadMessage(data.success ? `✅ ${data.message}` : `❌ ${data.error}`);
@@ -564,12 +560,6 @@ export default function ZeninhoChat() {
                                 <div className="flex-1 min-w-0 pr-5">
                                     <p className="text-xs font-medium truncate leading-relaxed">{conv.title}</p>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${conv.id === currentConversationId
-                                            ? dm ? 'bg-stone-700 text-stone-400' : 'bg-gray-200 text-gray-500'
-                                            : dm ? 'bg-stone-800/80 text-stone-600' : 'bg-gray-100 text-gray-400'
-                                        }`}>
-                                            {conv.model === 'gemini' ? 'Gemini' : 'GPT'}
-                                        </span>
                                         <span className={`text-[10px] ${dm ? 'text-stone-600' : 'text-gray-400'}`}>
                                             {formatRelativeTime(conv.updated_at)}
                                         </span>
@@ -625,7 +615,7 @@ export default function ZeninhoChat() {
                             <Settings size={16} className="shrink-0" />
                             <div className="text-left">
                                 <span className="block font-medium text-xs">Configurações</span>
-                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Modelo: {aiModel === 'gemini' ? 'Gemini' : 'ChatGPT'}</span>
+                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Preferências gerais</span>
                             </div>
                         </button>
                     </div>
@@ -999,7 +989,6 @@ export default function ZeninhoChat() {
                             {([
                                 { id: 'geral' as const, label: 'Geral', icon: <Settings size={16} /> },
                                 { id: 'aparencia' as const, label: 'Aparência', icon: <Moon size={16} /> },
-                                { id: 'ia' as const, label: 'Modelos IA', icon: <Sparkles size={16} /> },
                                 { id: 'som' as const, label: 'Som', icon: <Volume2 size={16} /> },
                             ]).map(item => (
                                 <button key={item.id} onClick={() => setSettingsTab(item.id)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-all ${settingsTab === item.id ? 'bg-white/10 text-white font-medium' : 'text-white/45 hover:text-white/80 hover:bg-white/5'}`}>
@@ -1015,7 +1004,6 @@ export default function ZeninhoChat() {
                                 <h2 className="text-lg font-semibold text-white">
                                     {settingsTab === 'geral' && 'Geral'}
                                     {settingsTab === 'aparencia' && 'Aparência'}
-                                    {settingsTab === 'ia' && 'Modelos de IA'}
                                     {settingsTab === 'som' && 'Som'}
                                 </h2>
                             </div>
@@ -1070,30 +1058,6 @@ export default function ZeninhoChat() {
                                                 ))}
                                             </div>
                                         </div>
-                                    </>
-                                )}
-
-                                {settingsTab === 'ia' && (
-                                    <>
-                                        <p className="text-xs text-white/30 uppercase tracking-widest pb-2">Modelo Ativo</p>
-                                        <p className="text-[11px] text-white/25 pb-3 leading-relaxed">O modelo selecionado será usado em novas mensagens desta conversa.</p>
-                                        {[
-                                            { id: 'gemini' as const, label: 'Gemini Flash', sub: 'Google DeepMind · Busca integrada', grad: 'from-orange-400 to-orange-600', ring: 'bg-orange-500', icon: <Sparkles size={16} className="text-white" /> },
-                                            { id: 'chatgpt' as const, label: 'GPT-4o Mini Search', sub: 'OpenAI · Pesquisa na web', grad: 'from-emerald-400 to-emerald-600', ring: 'bg-emerald-500', icon: <Cpu size={16} className="text-white" /> },
-                                        ].map(m => (
-                                            <button key={m.id} onClick={() => setAiModel(m.id)} className={`w-full flex items-center justify-between px-4 py-4 rounded-xl border transition-all ${aiModel === m.id ? 'bg-white/[0.08] border-white/15' : 'border-transparent hover:bg-white/5'}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.grad} flex items-center justify-center shadow-lg`}>{m.icon}</div>
-                                                    <div className="text-left">
-                                                        <div className="text-sm font-medium text-white">{m.label}</div>
-                                                        <div className="text-[11px] text-white/40">{m.sub}</div>
-                                                    </div>
-                                                </div>
-                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${aiModel === m.id ? m.ring : 'bg-white/10'}`}>
-                                                    {aiModel === m.id && <Check size={11} className="text-white" />}
-                                                </div>
-                                            </button>
-                                        ))}
                                     </>
                                 )}
 

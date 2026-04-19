@@ -24,7 +24,9 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "WebFetch(domain:platform.openai.com)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:openai.com)",
+      "WebFetch(domain:developers.openai.com)"
     ],
     "deny": []
   }

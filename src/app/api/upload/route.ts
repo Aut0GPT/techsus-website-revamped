@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
+import { embedBatch } from '@/lib/embeddings';
+import { requireUser } from '@/lib/supabase/server';
 // eslint-disable-next-line
 const pdfParse = require('pdf-parse');
 
@@ -131,44 +133,14 @@ async function extractXlsxText(buffer: Buffer): Promise<string> {
     return allText;
 }
 
-async function generateEmbedding(text: string): Promise<number[] | null> {
-    try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: { parts: [{ text }] },
-                    taskType: 'RETRIEVAL_DOCUMENT',
-                    outputDimensionality: 768,
-                }),
-            }
-        );
-
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        return data.embedding?.values || null;
-    } catch {
-        return null;
-    }
-}
-
 export async function POST(req: Request) {
+    const { user, response: authErr } = await requireUser();
+    if (authErr) return authErr;
+
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         const title = formData.get('title') as string | null;
-        const authCode = formData.get('authCode') as string | null;
-
-        // Simple auth check
-        if (authCode !== process.env.ZENINHO_AUTH_CODE) {
-            return new Response(
-                JSON.stringify({ error: 'Acesso não autorizado.' }),
-                { status: 401, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
 
         if (!file) {
             return new Response(
@@ -244,7 +216,7 @@ export async function POST(req: Request) {
             .insert({
                 title: title || file.name,
                 file_url: null,
-                uploaded_by: 'zeninho-user',
+                uploaded_by: user.email ?? user.id,
             })
             .select()
             .single();
@@ -256,21 +228,20 @@ export async function POST(req: Request) {
             );
         }
 
-        // Chunk the text
+        // Chunk + batch-embed
         const chunks = chunkText(text);
+        const embeddings = await embedBatch(chunks);
 
-        // Generate embeddings and store
         let successCount = 0;
-        for (const chunk of chunks) {
-            const embedding = await generateEmbedding(chunk);
-            if (embedding) {
-                const { error } = await supabase.from('document_embeddings').insert({
-                    document_id: doc.id,
-                    content: chunk,
-                    embedding: embedding,
-                });
-                if (!error) successCount++;
-            }
+        for (let i = 0; i < chunks.length; i++) {
+            const embedding = embeddings[i];
+            if (!embedding) continue;
+            const { error } = await supabase.from('document_embeddings').insert({
+                document_id: doc.id,
+                content: chunks[i],
+                embedding,
+            });
+            if (!error) successCount++;
         }
 
         return new Response(
