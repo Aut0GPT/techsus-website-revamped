@@ -450,10 +450,9 @@ export default function ZeninhoChat() {
     // ── Theme helpers ─────────────────────────────────────────────────────
     const dm = darkMode;
     const fontSizeClass = fontSize === 'small' ? 'text-xs' : fontSize === 'large' ? 'text-base' : 'text-sm';
-    const zeninhoImage =
-        zeninhoMood === 'thinking' ? '/images/zezinho/zeninhopensando.png' :
-        zeninhoMood === 'done'     ? '/images/zezinho/zeninhoeureka.png' :
-                                     '/images/zezinho/zeninhonormal.png';
+    const currentTitle = currentConversationId
+        ? conversations.find(c => c.id === currentConversationId)?.title ?? null
+        : messages.length > 0 ? generateTitle(messages) : null;
 
     // ── Merge cached tool parts into message.parts for rendering ─────────
     // Returns parts array guaranteed to include all tool invocations for
@@ -575,64 +574,38 @@ export default function ZeninhoChat() {
                         ))}
                     </div>
 
-                    {/* Bottom actions */}
-                    <div className={`p-3 border-t ${dm ? 'border-stone-800' : 'border-gray-200'} space-y-1.5 shrink-0`}>
-                        <button
-                            onClick={() => setShowUpload(!showUpload)}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm ${showUpload
-                                ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400'
-                                : dm ? 'bg-stone-800/50 hover:bg-stone-800 text-stone-300 hover:text-white border border-transparent' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 border border-transparent'
-                            }`}
-                        >
-                            <span className="text-xl shrink-0">🍰</span>
-                            <div className="text-left">
-                                <span className="block font-medium text-xs">Alimentar o Zeninho</span>
-                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Ensine algo novo pra ele!</span>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => router.push('/zeninho/transcrever')}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm ${
-                                dm ? 'bg-stone-800/50 hover:bg-stone-800 border border-transparent text-stone-300 hover:text-white'
-                                   : 'bg-gray-100 hover:bg-gray-200 border border-transparent text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <Users size={16} className="shrink-0" />
-                            <div className="text-left">
-                                <span className="block font-medium text-xs">Reunião</span>
-                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Transcrever em tempo real</span>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setShowSettings(!showSettings)}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm ${showSettings
-                                ? dm ? 'bg-stone-700/60 border border-stone-600/50 text-stone-200' : 'bg-gray-200 border border-gray-300 text-gray-800'
-                                : dm ? 'bg-stone-800/50 hover:bg-stone-800 text-stone-300 hover:text-white border border-transparent' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 border border-transparent'
-                            }`}
-                        >
-                            <Settings size={16} className="shrink-0" />
-                            <div className="text-left">
-                                <span className="block font-medium text-xs">Configurações</span>
-                                <span className={`block text-[10px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>Preferências gerais</span>
-                            </div>
-                        </button>
-                    </div>
-
-                    {/* Reactive Zeninho Character */}
-                    <div className="flex flex-col items-center justify-end p-4 pb-2 shrink-0">
-                        <div className={`px-3 py-1.5 rounded-full mb-2 text-[11px] font-medium transition-all duration-500 ${zeninhoMood === 'thinking'
-                            ? 'text-orange-400 bg-orange-500/10 border border-orange-500/20'
-                            : zeninhoMood === 'done'
-                                ? 'text-green-400 bg-green-500/10 border border-green-500/20'
-                                : 'text-stone-500 bg-stone-800/50 border border-stone-700/30'
-                        }`}>
-                            {zeninhoMood === 'thinking' ? '🧠 Pensando...' : zeninhoMood === 'done' ? '✅ Pronto!' : '💤 Aguardando...'}
-                        </div>
-                        <div className="relative">
-                            <div className={`absolute inset-0 rounded-full blur-2xl transition-all duration-700 ${zeninhoMood === 'thinking' ? 'bg-orange-500/20 scale-110 animate-pulse' : zeninhoMood === 'done' ? 'bg-green-500/15 scale-105' : 'bg-orange-500/5 scale-100'}`} />
-                            <Image src={zeninhoImage} alt="Zeninho" width={200} height={200} className={`relative z-10 drop-shadow-2xl transition-all duration-500 ${zeninhoMood === 'thinking' ? 'animate-bounce-slow' : ''}`} style={{ width: 'auto', height: 'auto', maxWidth: '200px' }} priority />
+                    {/* Bottom action icon row */}
+                    <div className={`p-3 border-t ${dm ? 'border-stone-800' : 'border-gray-200'} shrink-0`}>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setShowUpload(!showUpload)}
+                                title="Alimentar o Zeninho · Enviar documento"
+                                className={`group flex-1 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${showUpload
+                                    ? 'bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/30'
+                                    : dm ? 'text-stone-400 hover:text-orange-300 hover:bg-stone-800' : 'text-gray-500 hover:text-orange-600 hover:bg-gray-100'
+                                }`}
+                            >
+                                <span className="text-[17px] leading-none transition-transform group-hover:scale-110">🍰</span>
+                            </button>
+                            <button
+                                onClick={() => router.push('/zeninho/transcrever')}
+                                title="Reunião · Transcrever em tempo real"
+                                className={`group flex-1 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${
+                                    dm ? 'text-stone-400 hover:text-orange-300 hover:bg-stone-800' : 'text-gray-500 hover:text-orange-600 hover:bg-gray-100'
+                                }`}
+                            >
+                                <Users size={17} className="transition-transform group-hover:scale-110" />
+                            </button>
+                            <button
+                                onClick={() => setShowSettings(!showSettings)}
+                                title="Configurações · Preferências gerais"
+                                className={`group flex-1 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${showSettings
+                                    ? dm ? 'bg-stone-800 text-stone-100 ring-1 ring-stone-700' : 'bg-gray-200 text-gray-800 ring-1 ring-gray-300'
+                                    : dm ? 'text-stone-400 hover:text-orange-300 hover:bg-stone-800' : 'text-gray-500 hover:text-orange-600 hover:bg-gray-100'
+                                }`}
+                            >
+                                <Settings size={17} className="transition-transform group-hover:rotate-45" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -677,46 +650,72 @@ export default function ZeninhoChat() {
                 {showSidebar && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setShowSidebar(false)} />}
 
                 {/* ── MAIN CHAT AREA ────────────────────────────────────── */}
-                <div className="flex-1 flex flex-col min-w-0">
+                <div className={`flex-1 flex flex-col min-w-0 relative ${dm ? 'bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(249,115,22,0.06),transparent_70%)]' : 'bg-gray-50'}`}>
 
                     {/* Chat header */}
-                    <div className={`h-14 border-b ${dm ? 'border-stone-800 bg-stone-900/80' : 'border-gray-200 bg-white/90'} backdrop-blur-sm flex items-center px-4 gap-3 shrink-0`}>
-                        <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden text-stone-400 hover:text-white">
+                    <div className={`h-14 border-b ${dm ? 'border-stone-800/80 bg-stone-900/60' : 'border-gray-200 bg-white/80'} backdrop-blur-md flex items-center px-4 gap-3 shrink-0`}>
+                        <button onClick={() => setShowSidebar(!showSidebar)} className={`lg:hidden ${dm ? 'text-stone-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
                             <Menu size={20} />
                         </button>
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-600 shrink-0 shadow-lg shadow-orange-500/20">
-                            <Image src={isLoading ? '/images/zezinho/zeninhopensando.png' : '/images/zezinho/zeninhonormal.png'} alt="Zeninho" width={36} height={36} className="w-full h-full object-cover" />
+                        <div className="relative shrink-0">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-orange-400/30 to-orange-600/30 ring-1 ring-orange-500/20">
+                                <Image src={isLoading ? '/images/zezinho/zeninhopensando.png' : '/images/zezinho/zeninhonormal.png'} alt="Zeninho" width={36} height={36} className={`w-full h-full object-cover ${isLoading ? 'animate-pulse' : ''}`} />
+                            </div>
+                            <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${dm ? 'border-stone-900' : 'border-white'} ${isLoading ? 'bg-orange-400 animate-pulse' : 'bg-emerald-500'}`} />
                         </div>
-                        <div>
-                            <h1 className={`font-semibold text-sm ${dm ? 'text-white' : 'text-gray-900'}`}>Zeninho</h1>
-                            <p className={`text-xs ${dm ? 'text-stone-500' : 'text-gray-400'}`}>{isLoading ? '✍️ Pensando...' : '🟢 Online'}</p>
+                        <div className="flex-1 min-w-0">
+                            <h1 className={`font-semibold text-sm truncate ${dm ? 'text-white' : 'text-gray-900'}`}>
+                                {currentTitle ?? 'Zeninho'}
+                            </h1>
+                            <p className={`text-[11px] ${dm ? 'text-stone-500' : 'text-gray-400'}`}>
+                                {isLoading ? 'pensando…' : currentTitle ? 'Zeninho · disponível' : 'disponível'}
+                            </p>
                         </div>
                     </div>
 
                     {/* Messages */}
-                    <div className={`flex-1 overflow-y-auto px-4 py-6 space-y-6 ${dm ? '' : 'bg-gray-50'}`}>
+                    <div className={`flex-1 overflow-y-auto px-4 py-6 space-y-6`}>
 
                         {/* Empty state */}
                         {messages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-center space-y-6 max-w-lg mx-auto">
-                                <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-orange-400/20 to-orange-600/20 p-1 shadow-2xl shadow-orange-500/20">
-                                    <Image src="/images/zezinho/zeninhonormal.png" alt="Zeninho" width={128} height={128} className="w-full h-full object-cover rounded-full" />
+                            <div className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto py-8">
+                                <div className="relative mb-6">
+                                    <div className="absolute inset-0 bg-orange-500/15 blur-3xl rounded-full scale-90" />
+                                    <Image
+                                        src="/images/zezinho/zeninhonormal.png"
+                                        alt="Zeninho"
+                                        width={180}
+                                        height={180}
+                                        className="relative z-10 drop-shadow-2xl animate-float-slow"
+                                        style={{ width: 'auto', height: 'auto', maxWidth: '180px' }}
+                                        priority
+                                    />
                                 </div>
-                                <div>
-                                    <h2 className={`text-2xl font-bold mb-2 ${dm ? 'text-white' : 'text-gray-900'}`}>Olá! Eu sou o Zeninho! 👋</h2>
-                                    <p className={`leading-relaxed ${dm ? 'text-stone-400' : 'text-gray-500'}`}>
-                                        Assistente inteligente da TECHSUS. Posso buscar documentos, pesquisar na web, gerar imagens e muito mais! 🍰
+                                <div className="space-y-2 mb-8">
+                                    <h2 className={`text-3xl font-bold tracking-tight ${dm ? 'text-white' : 'text-gray-900'}`}>
+                                        Olá! Eu sou o <span className="bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Zeninho</span> 👋
+                                    </h2>
+                                    <p className={`text-sm leading-relaxed max-w-md mx-auto ${dm ? 'text-stone-400' : 'text-gray-500'}`}>
+                                        Assistente da TECHSUS. Busco documentos, pesquiso na web, gero imagens e muito mais.
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                                     {[
-                                        'Como funciona o sistema de painéis?',
-                                        'Quais são as patentes da TECHSUS?',
-                                        'Me explique o processo de montagem',
-                                        'Quais documentos estão disponíveis?',
+                                        { icon: '⚡', text: 'Como funciona o sistema de painéis?' },
+                                        { icon: '📋', text: 'Quais são as patentes da TECHSUS?' },
+                                        { icon: '🔧', text: 'Me explique o processo de montagem' },
+                                        { icon: '📁', text: 'Quais documentos estão disponíveis?' },
                                     ].map((s) => (
-                                        <button key={s} onClick={() => sendMessage({ text: s })} className="text-left px-4 py-3 rounded-xl bg-stone-800/50 hover:bg-stone-800 border border-stone-700/50 hover:border-orange-500/30 text-stone-300 hover:text-white text-sm transition-all duration-200">
-                                            {s}
+                                        <button
+                                            key={s.text}
+                                            onClick={() => sendMessage({ text: s.text })}
+                                            className={`group flex items-center gap-3 text-left px-4 py-3 rounded-xl border transition-all duration-200 ${dm
+                                                ? 'border-stone-800/80 hover:border-orange-500/40 bg-stone-900/30 hover:bg-stone-800/60 text-stone-400 hover:text-white'
+                                                : 'border-gray-200 hover:border-orange-400/60 bg-white/50 hover:bg-white text-gray-600 hover:text-gray-900'
+                                            }`}
+                                        >
+                                            <span className="text-base opacity-60 group-hover:opacity-100 transition-opacity shrink-0">{s.icon}</span>
+                                            <span className="text-[13px] leading-snug">{s.text}</span>
                                         </button>
                                     ))}
                                 </div>
