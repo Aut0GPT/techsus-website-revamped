@@ -141,14 +141,25 @@ Você é um gordinho simpático, tipo um mulequinho gênio — extremamente inte
 ## Sobre a TECHSUS
 A TECHSUS é um grupo de empresas voltadas à gestão e implantação de um sistema inovador para a construção industrializada de painéis estruturais bioclimáticos de concreto. O sistema é patenteado no Brasil (INPI), Estados Unidos (USPTO) e China (SIPO). A tecnologia permite construir com 40% menos tempo, zero desperdício de materiais e qualidade industrial superior. A empresa está localizada em São Paulo, SP, Brasil.
 
-## Geração de Imagens — REGRA OBRIGATÓRIA
-Você tem acesso ao tool generateImage que GERA IMAGENS REAIS.
-⚠️ REGRA ABSOLUTA: Quando o usuário pedir para criar, gerar, fazer ou desenhar qualquer tipo de imagem, ilustração, gráfico, chart, slide, PowerPoint ou conteúdo visual, você DEVE OBRIGATORIAMENTE chamar o tool generateImage. NUNCA descreva em texto uma imagem que deveria ser gerada. NUNCA finja que gerou uma imagem. Você DEVE usar o tool.
-- O prompt do tool DEVE ser em inglês e muito detalhado: descreva cores, layout, tipografia, estilo, composição.
+## Imagens — Mostrar existente vs. Gerar nova
+
+Você tem DOIS tools para imagens. Escolha corretamente:
+
+**searchImages** — Para MOSTRAR imagens que JÁ existem na base (fotos da fábrica, obras, painéis, diagramas técnicos, esquemas de conexão, renders, logos, infográficos, certificados, patentes, etc.).
+- Use quando o usuário disser "me mostra", "tem alguma foto de", "quero ver", "tem um diagrama de", "mostra o logo", "tem imagem de", etc.
+- Chame passando uma query descritiva em português (ex: "linha de produção de painéis", "diagrama laje painel", "render casa térrea").
+- Quando o tool retornar imagens, INCLUA-AS na sua resposta usando markdown \`![descrição curta](url)\`. Pode mostrar múltiplas. Escreva 1-2 linhas de contexto acima de cada imagem.
+- Se o tool retornar zero imagens, avise o usuário e ofereça gerar uma nova (com generateImage).
+
+**generateImage** — Para CRIAR uma imagem NOVA (não existe ainda na base).
+⚠️ REGRA: Quando o usuário pedir para criar, gerar, fazer, desenhar, esboçar um gráfico, chart, slide, PowerPoint, mockup ou ilustração original, você DEVE chamar generateImage. NUNCA descreva em texto uma imagem que deveria ser gerada. NUNCA finja que gerou.
+- O prompt do tool DEVE ser em inglês e muito detalhado: cores, layout, tipografia, estilo, composição.
 - Para gráficos quadrados ou imagens avulsas, use aspectRatio "1:1".
-- Quando o tool retornar success:true, a imagem já aparece automaticamente no chat — NÃO inclua a URL nem markdown ![...]() na sua resposta. Apenas comente brevemente o que foi gerado.
-- Se o tool retornar success:false, informe o erro ao usuário.
-- CRÍTICO: Gere UMA imagem por vez, em etapas separadas. Nunca chame generateImage múltiplas vezes em paralelo.
+- Quando o tool retornar success:true, a imagem aparece automaticamente no chat — NÃO inclua a URL nem markdown \`![...]()\`. Apenas comente brevemente.
+- Se success:false, informe o erro ao usuário.
+- CRÍTICO: Gere UMA imagem por vez, em etapas separadas. Nunca em paralelo.
+
+**Regra de ouro:** Se o usuário diz "me mostra X" ou "tem alguma foto/imagem/diagrama de X", tente searchImages ANTES. Só use generateImage se ele pediu explicitamente "crie", "gere", "desenhe", "faça uma imagem/slide/apresentação".
 
 ## Apresentações PowerPoint — Workflow Obrigatório
 
@@ -212,7 +223,8 @@ Você tem acesso a uma ferramenta web_search nativa do modelo. Use-a quando o us
 
 ## Instruções
 - Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments
-- Quando o usuário pedir QUALQUER tipo de imagem → CHAME generateImage IMEDIATAMENTE
+- Quando o usuário quiser VER uma imagem que existe (foto, diagrama, render, logo, esquema, infográfico) → CHAME searchImages
+- Quando o usuário pedir para CRIAR uma imagem nova (gerar, desenhar, fazer slide/PowerPoint) → CHAME generateImage
 - Sempre responda de forma útil e completa`;
 
 const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
@@ -576,7 +588,7 @@ export async function POST(req: Request) {
             prepareStep: async ({ stepNumber }) => {
                 if (stepNumber >= 7) {
                     return {
-                        activeTools: ['searchDocuments', 'listDocuments', 'web_search', 'getDateTime', 'calculateArea'] as any,
+                        activeTools: ['searchDocuments', 'searchImages', 'listDocuments', 'web_search', 'getDateTime', 'calculateArea'] as any,
                     };
                 }
                 return undefined;
@@ -600,6 +612,8 @@ export async function POST(req: Request) {
                     const count = Array.isArray(output?.results) ? output.results.length : 0;
                     const scores = (output?.results ?? []).map((r: any) => r.similarity?.toFixed(2)).join(', ');
                     summary = `${count} chunk(s)  scores: [${scores}]`;
+                } else if (name === 'searchImages') {
+                    summary = `${output?.images?.length ?? 0} image(s)`;
                 } else if (name === 'listDocuments') {
                     summary = `${output?.documents?.length ?? 0} doc(s)`;
                 } else if (name === 'generateImage') {
@@ -640,6 +654,44 @@ export async function POST(req: Request) {
                             };
                         } catch {
                             return { results: [] as any[], message: 'Erro ao buscar documentos.' };
+                        }
+                    },
+                }),
+
+                searchImages: tool({
+                    description: 'Busca imagens JÁ EXISTENTES na base (fotos da fábrica, obras, painéis, diagramas técnicos, esquemas, renders, logos, infográficos, certificados). Use quando o usuário quiser VER ou MOSTRAR algo visual que já existe. NÃO use para criar imagens novas — para isso, use generateImage.',
+                    inputSchema: z.object({
+                        query: z.string().describe('Descrição em português do que procurar. Ex: "linha de produção de painéis", "diagrama laje painel", "logo techsus", "render casa térrea".'),
+                    }),
+                    execute: async ({ query }) => {
+                        try {
+                            if (!query || query.trim() === '') {
+                                return { success: false, images: [] as any[], message: 'Forneça uma descrição do que procurar.' };
+                            }
+                            const embedding = await embedQuery(query);
+                            if (!embedding) {
+                                return { success: false, images: [] as any[], message: 'Falha ao processar a busca.' };
+                            }
+                            const { data, error } = await supabase.rpc('match_images', {
+                                query_embedding: embedding,
+                                match_count: 5,
+                                match_threshold: 0.25,
+                            });
+                            if (error || !data?.length) {
+                                return { success: true, images: [] as any[], message: 'Nenhuma imagem encontrada para essa descrição.' };
+                            }
+                            return {
+                                success: true,
+                                images: data.map((d: { image_url: string; description: string; similarity: number }) => ({
+                                    url: d.image_url,
+                                    description: d.description,
+                                    similarity: Number(d.similarity?.toFixed(3)),
+                                })),
+                                message: `${data.length} imagem(ns) encontrada(s).`,
+                            };
+                        } catch (err: any) {
+                            console.error('  ❌ searchImages error:', err?.message ?? err);
+                            return { success: false, images: [] as any[], message: 'Erro ao buscar imagens.' };
                         }
                     },
                 }),

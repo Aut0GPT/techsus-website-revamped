@@ -1232,6 +1232,17 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
             },
             detail: (a) => a?.query ? `"${String(a.query).slice(0, 70)}"` : null,
         },
+        searchImages: {
+            icon: <ImagePlus size={13} />,
+            color: 'amber',
+            label: 'Base de Imagens',
+            loadingText: 'Buscando imagens relevantes...',
+            doneText: (r) => {
+                const n = r?.images?.length ?? 0;
+                return `${n} imagem${n !== 1 ? 'ns' : ''} encontrada${n !== 1 ? 's' : ''}`;
+            },
+            detail: (a) => a?.query ? `"${String(a.query).slice(0, 70)}"` : null,
+        },
         webSearch: {
             icon: <Globe size={13} />,
             color: 'violet',
