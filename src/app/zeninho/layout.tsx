@@ -81,7 +81,7 @@ export default function ZeninhoLayout({ children }: { children: React.ReactNode 
                                 <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-2xl" />
                                 <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-orange-400/20 to-orange-600/20 p-1 shadow-2xl shadow-orange-500/30">
                                     <Image
-                                        src="/images/zezinho/Zeninhonormal.png"
+                                        src="/images/zezinho/zeninhonormal.png"
                                         alt="Zeninho"
                                         width={96}
                                         height={96}

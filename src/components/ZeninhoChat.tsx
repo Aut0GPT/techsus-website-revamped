@@ -452,8 +452,8 @@ export default function ZeninhoChat() {
     const fontSizeClass = fontSize === 'small' ? 'text-xs' : fontSize === 'large' ? 'text-base' : 'text-sm';
     const zeninhoImage =
         zeninhoMood === 'thinking' ? '/images/zezinho/zeninhopensando.png' :
-        zeninhoMood === 'done'     ? '/images/zezinho/zeninhojasei.png' :
-                                     '/images/zezinho/Zeninhonormal.png';
+        zeninhoMood === 'done'     ? '/images/zezinho/zeninhoeureka.png' :
+                                     '/images/zezinho/zeninhonormal.png';
 
     // ── Merge cached tool parts into message.parts for rendering ─────────
     // Returns parts array guaranteed to include all tool invocations for
@@ -685,7 +685,7 @@ export default function ZeninhoChat() {
                             <Menu size={20} />
                         </button>
                         <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-600 shrink-0 shadow-lg shadow-orange-500/20">
-                            <Image src={isLoading ? '/images/zezinho/zeninhopensando.png' : '/images/zezinho/Zeninhonormal.png'} alt="Zeninho" width={36} height={36} className="w-full h-full object-cover" />
+                            <Image src={isLoading ? '/images/zezinho/zeninhopensando.png' : '/images/zezinho/zeninhonormal.png'} alt="Zeninho" width={36} height={36} className="w-full h-full object-cover" />
                         </div>
                         <div>
                             <h1 className={`font-semibold text-sm ${dm ? 'text-white' : 'text-gray-900'}`}>Zeninho</h1>
@@ -700,7 +700,7 @@ export default function ZeninhoChat() {
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-6 max-w-lg mx-auto">
                                 <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-orange-400/20 to-orange-600/20 p-1 shadow-2xl shadow-orange-500/20">
-                                    <Image src="/images/zezinho/Zeninhonormal.png" alt="Zeninho" width={128} height={128} className="w-full h-full object-cover rounded-full" />
+                                    <Image src="/images/zezinho/zeninhonormal.png" alt="Zeninho" width={128} height={128} className="w-full h-full object-cover rounded-full" />
                                 </div>
                                 <div>
                                     <h2 className={`text-2xl font-bold mb-2 ${dm ? 'text-white' : 'text-gray-900'}`}>Olá! Eu sou o Zeninho! 👋</h2>
@@ -731,7 +731,7 @@ export default function ZeninhoChat() {
                                         <Image
                                             src={isLoading && message.id === messages[messages.length - 1]?.id
                                                 ? '/images/zezinho/zeninhopensando.png'
-                                                : '/images/zezinho/zeninhojasei.png'}
+                                                : '/images/zezinho/zeninhoeureka.png'}
                                             alt="Zeninho" width={36} height={36} className="w-full h-full object-cover"
                                         />
                                     </div>

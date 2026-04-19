@@ -128,7 +128,7 @@ export default function SetPasswordPage() {
                                     <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl" />
                                     <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-orange-400/20 to-orange-600/20 p-1 shadow-xl shadow-orange-500/20">
                                         <Image
-                                            src="/images/zezinho/Zeninhonormal.png"
+                                            src="/images/zezinho/zeninhonormal.png"
                                             alt="Zeninho"
                                             width={80}
                                             height={80}
