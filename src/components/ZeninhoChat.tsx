@@ -7,7 +7,7 @@ import {
     Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation,
     Paperclip, Mic, MicOff, X, Volume2, Settings, Moon, Sun, Type,
     MessageSquarePlus, Search, Globe, Clock, FolderOpen, Ruler, Zap,
-    LogOut, Trash2, Users,
+    LogOut, Trash2, Users, Plus,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -678,24 +678,23 @@ export default function ZeninhoChat() {
 
                         {/* Empty state */}
                         {messages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto py-8">
-                                <div className="relative mb-6">
+                            <div className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto py-4 sm:py-8">
+                                <div className="relative mb-4 sm:mb-6 w-[120px] sm:w-[180px]">
                                     <div className="absolute inset-0 bg-orange-500/15 blur-3xl rounded-full scale-90" />
                                     <Image
                                         src="/images/zezinho/zeninhonormal.png"
                                         alt="Zeninho"
                                         width={180}
                                         height={180}
-                                        className="relative z-10 drop-shadow-2xl"
-                                        style={{ width: 'auto', height: 'auto', maxWidth: '180px' }}
+                                        className="relative z-10 drop-shadow-2xl w-full h-auto"
                                         priority
                                     />
                                 </div>
-                                <div className="space-y-2 mb-8">
-                                    <h2 className={`text-3xl font-bold tracking-tight ${dm ? 'text-white' : 'text-gray-900'}`}>
+                                <div className="space-y-1.5 sm:space-y-2 mb-6 sm:mb-8 px-2">
+                                    <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${dm ? 'text-white' : 'text-gray-900'}`}>
                                         Olá! Eu sou o <span className="bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Zeninho</span> 👋
                                     </h2>
-                                    <p className={`text-sm leading-relaxed max-w-md mx-auto ${dm ? 'text-stone-400' : 'text-gray-500'}`}>
+                                    <p className={`text-[13px] sm:text-sm leading-relaxed max-w-md mx-auto ${dm ? 'text-stone-400' : 'text-gray-500'}`}>
                                         Assistente da TECHSUS. Busco documentos, pesquiso na web, gero imagens e muito mais.
                                     </p>
                                 </div>
@@ -709,7 +708,7 @@ export default function ZeninhoChat() {
                                         <button
                                             key={s.text}
                                             onClick={() => sendMessage({ text: s.text })}
-                                            className={`group flex items-center gap-3 text-left px-4 py-3 rounded-xl border transition-all duration-200 ${dm
+                                            className={`group flex items-center gap-3 text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border transition-all duration-200 ${dm
                                                 ? 'border-stone-800/80 hover:border-orange-500/40 bg-stone-900/30 hover:bg-stone-800/60 text-stone-400 hover:text-white'
                                                 : 'border-gray-200 hover:border-orange-400/60 bg-white/50 hover:bg-white text-gray-600 hover:text-gray-900'
                                             }`}
@@ -885,43 +884,28 @@ export default function ZeninhoChat() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* ── INPUT AREA ──────────────────────────────────────── */}
-                    <div className={`border-t ${dm ? 'border-stone-800 bg-stone-900/80' : 'border-gray-200 bg-white/90'} backdrop-blur-sm p-4`}>
-                        <div className="max-w-4xl mx-auto">
-
-                            {/* Quick action chips */}
-                            {showActions && (
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                    {[
-                                        { label: 'Criar Imagem', icon: <ImagePlus size={14} />, prompt: 'Crie uma imagem de ' },
-                                        { label: 'Criar PowerPoint', icon: <Presentation size={14} />, prompt: 'Crie uma apresentação de PowerPoint com slides sobre ' },
-                                        { label: 'Criar Gráfico', icon: <BarChart3 size={14} />, prompt: 'Crie um gráfico mostrando ' },
-                                    ].map((action) => (
-                                        <button key={action.label} onClick={() => { setInput(action.prompt); setShowActions(false); textareaRef.current?.focus(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-stone-800 hover:bg-stone-700 border border-stone-700/50 hover:border-orange-500/40 text-stone-300 hover:text-white text-xs font-medium transition-all duration-200">
-                                            {action.icon}{action.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                    {/* ── INPUT AREA (Gemini-style pill) ─────────────────────── */}
+                    <div className={`border-t ${dm ? 'border-stone-800/60 bg-stone-950/70' : 'border-gray-200 bg-white/90'} backdrop-blur-md px-3 sm:px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
+                        <div className="max-w-3xl mx-auto">
 
                             <input type="file" ref={chatFileInputRef} onChange={handleChatFileChange} accept="image/*,.pdf,.doc,.docx,.pptx,.xlsx,.txt" multiple className="hidden" />
 
                             {/* File previews */}
                             {filePreviews.length > 0 && (
-                                <div className="flex gap-2 mb-3 flex-wrap">
+                                <div className="flex gap-2 mb-2 flex-wrap">
                                     {filePreviews.map((preview, i) => (
                                         <div key={i} className="relative group">
                                             {preview.type === 'image' ? (
-                                                <div className="w-16 h-16 rounded-lg overflow-hidden border border-stone-700 bg-stone-800">
+                                                <div className="w-14 h-14 rounded-lg overflow-hidden border border-stone-700 bg-stone-800">
                                                     <img src={preview.url} alt={preview.name} className="w-full h-full object-cover" />
                                                 </div>
                                             ) : (
-                                                <div className="h-16 px-3 rounded-lg border border-stone-700 bg-stone-800 flex items-center gap-2">
+                                                <div className="h-14 px-3 rounded-lg border border-stone-700 bg-stone-800 flex items-center gap-2">
                                                     <Paperclip size={14} className="text-stone-400 shrink-0" />
-                                                    <span className="text-xs text-stone-300 max-w-[100px] truncate">{preview.name}</span>
+                                                    <span className="text-xs text-stone-300 max-w-[120px] truncate">{preview.name}</span>
                                                 </div>
                                             )}
-                                            <button onClick={() => removeChatFile(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button type="button" onClick={() => removeChatFile(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md">
                                                 <X size={10} />
                                             </button>
                                         </div>
@@ -929,26 +913,118 @@ export default function ZeninhoChat() {
                                 </div>
                             )}
 
-                            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex items-end gap-2">
-                                <button type="button" onClick={() => setShowActions(!showActions)} className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${showActions ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : dm ? 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-orange-500/30' : 'bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-300'}`} title="Criar conteúdo visual">
-                                    <ImagePlus size={18} />
-                                </button>
-                                <button type="button" onClick={() => chatFileInputRef.current?.click()} className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${chatFiles ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : dm ? 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-blue-500/30' : 'bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-300'}`} title="Anexar arquivo">
-                                    <Paperclip size={18} />
-                                </button>
-                                <div className="flex-1 relative">
-                                    <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} disabled={isLoading} placeholder={chatFiles ? 'Descreva o que quer saber...' : 'Escreva sua mensagem aqui...'} rows={1} className={`w-full resize-none overflow-hidden rounded-xl border focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 px-4 py-3 text-base outline-none transition-colors shadow-inner ${dm ? 'bg-stone-800 border-stone-700 text-white placeholder-stone-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`} />
+                            {/* Pill container: textarea on top, actions row below */}
+                            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className={`relative rounded-[28px] border transition-all ${dm ? 'bg-stone-900/90 border-stone-700/70 focus-within:border-orange-500/50 focus-within:shadow-[0_0_0_4px_rgba(249,115,22,0.08)]' : 'bg-white border-gray-200 focus-within:border-orange-500 focus-within:shadow-[0_0_0_4px_rgba(249,115,22,0.08)]'} shadow-lg shadow-black/10`}>
+                                {/* Textarea */}
+                                <textarea
+                                    ref={textareaRef}
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                                    disabled={isLoading}
+                                    placeholder={chatFiles ? 'Descreva o que quer saber...' : 'Peça algo ao Zeninho...'}
+                                    rows={1}
+                                    className={`block w-full resize-none overflow-hidden bg-transparent text-[15px] leading-6 outline-none px-5 pt-3.5 pb-1 ${dm ? 'text-white placeholder-stone-500' : 'text-gray-900 placeholder-gray-400'}`}
+                                />
+
+                                {/* Action row */}
+                                <div className="flex items-center justify-between px-2 pb-2">
+                                    {/* + button (opens menu) */}
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowActions(!showActions)}
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${showActions ? 'bg-orange-500 text-white rotate-45 shadow-md shadow-orange-500/30' : dm ? 'text-stone-400 hover:bg-stone-800 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
+                                            aria-label="Mais opções"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+
+                                        {/* Desktop dropdown (above +) */}
+                                        {showActions && (
+                                            <>
+                                                <div className="hidden sm:block fixed inset-0 z-30" onClick={() => setShowActions(false)} />
+                                                <div className={`hidden sm:block absolute bottom-full left-0 mb-2 min-w-[240px] rounded-2xl overflow-hidden shadow-2xl border z-40 animate-fade-in ${dm ? 'bg-stone-900 border-stone-700' : 'bg-white border-gray-200'}`}>
+                                                    {[
+                                                        { label: 'Criar Imagem', icon: <ImagePlus size={18} />, accent: 'text-orange-400', onClick: () => { setInput('Crie uma imagem de '); textareaRef.current?.focus(); } },
+                                                        { label: 'Criar PowerPoint', icon: <Presentation size={18} />, accent: 'text-red-400', onClick: () => { setInput('Crie uma apresentação de PowerPoint com slides sobre '); textareaRef.current?.focus(); } },
+                                                        { label: 'Criar Gráfico', icon: <BarChart3 size={18} />, accent: 'text-blue-400', onClick: () => { setInput('Crie um gráfico mostrando '); textareaRef.current?.focus(); } },
+                                                        { label: 'Anexar arquivo', icon: <Paperclip size={18} />, accent: 'text-emerald-400', divider: true, onClick: () => { chatFileInputRef.current?.click(); } },
+                                                    ].map((a) => (
+                                                        <button
+                                                            key={a.label}
+                                                            type="button"
+                                                            onClick={() => { a.onClick(); setShowActions(false); }}
+                                                            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${a.divider ? `border-t ${dm ? 'border-stone-800' : 'border-gray-100'}` : ''} ${dm ? 'text-stone-200 hover:bg-stone-800' : 'text-gray-700 hover:bg-gray-50'}`}
+                                                        >
+                                                            <span className={a.accent}>{a.icon}</span>
+                                                            {a.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Right cluster: Mic + Send */}
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={toggleVoiceInput}
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isListening ? 'bg-red-500/15 text-red-400 animate-pulse' : dm ? 'text-stone-400 hover:bg-stone-800 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
+                                            title={isListening ? 'Parar' : 'Falar'}
+                                        >
+                                            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={(!input.trim() && !chatFiles) || isLoading}
+                                            className={`w-10 h-10 rounded-full text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/20 disabled:shadow-none ${(!input.trim() && !chatFiles) || isLoading ? dm ? 'bg-stone-700/60 text-stone-500' : 'bg-gray-200 text-gray-400' : 'bg-orange-600 hover:bg-orange-500'}`}
+                                            aria-label="Enviar"
+                                        >
+                                            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={16} />}
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="button" onClick={toggleVoiceInput} className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${isListening ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse' : dm ? 'bg-stone-800 text-stone-400 hover:text-white border border-stone-700 hover:border-orange-500/30' : 'bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-300'}`} title={isListening ? 'Parar' : 'Falar'}>
-                                    {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-                                </button>
-                                <button type="submit" disabled={(!input.trim() && !chatFiles) || isLoading} className={`shrink-0 w-11 h-11 rounded-xl text-white flex items-center justify-center transition-colors shadow-lg shadow-orange-500/20 disabled:shadow-none bg-orange-600 hover:bg-orange-500 ${dm ? 'disabled:bg-stone-700 disabled:text-stone-500' : 'disabled:bg-gray-200 disabled:text-gray-400'}`}>
-                                    {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                </button>
                             </form>
-                            <p className={`text-center text-xs mt-2 ${dm ? 'text-stone-600' : 'text-gray-400'}`}>Zeninho pode cometer erros. Verifique informações importantes.</p>
+
+                            <p className={`text-center text-[11px] mt-2 ${dm ? 'text-stone-600' : 'text-gray-400'}`}>Zeninho pode cometer erros. Verifique informações importantes.</p>
                         </div>
                     </div>
+
+                    {/* ── MOBILE BOTTOM SHEET (+ menu) ────────────────────────────────── */}
+                    {showActions && (
+                        <div className="sm:hidden fixed inset-0 z-[60] flex items-end animate-fade-in" onClick={() => setShowActions(false)}>
+                            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+                            <div
+                                className={`relative w-full rounded-t-3xl border-t border-x shadow-2xl pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 animate-slide-up ${dm ? 'bg-stone-900 border-stone-700' : 'bg-white border-gray-200'}`}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className={`w-10 h-1 rounded-full mx-auto mb-4 ${dm ? 'bg-stone-600' : 'bg-gray-300'}`} />
+                                <ul className="pb-2">
+                                    {[
+                                        { label: 'Criar Imagem', icon: <ImagePlus size={20} />, accent: 'text-orange-400', bg: 'bg-orange-500/10', onClick: () => { setInput('Crie uma imagem de '); textareaRef.current?.focus(); } },
+                                        { label: 'Criar PowerPoint', icon: <Presentation size={20} />, accent: 'text-red-400', bg: 'bg-red-500/10', onClick: () => { setInput('Crie uma apresentação de PowerPoint com slides sobre '); textareaRef.current?.focus(); } },
+                                        { label: 'Criar Gráfico', icon: <BarChart3 size={20} />, accent: 'text-blue-400', bg: 'bg-blue-500/10', onClick: () => { setInput('Crie um gráfico mostrando '); textareaRef.current?.focus(); } },
+                                        { label: 'Anexar arquivo', icon: <Paperclip size={20} />, accent: 'text-emerald-400', bg: 'bg-emerald-500/10', divider: true, onClick: () => { chatFileInputRef.current?.click(); } },
+                                    ].map((a) => (
+                                        <li key={a.label} className={a.divider ? `mt-2 pt-2 border-t ${dm ? 'border-stone-800' : 'border-gray-100'}` : ''}>
+                                            <button
+                                                type="button"
+                                                onClick={() => { a.onClick(); setShowActions(false); }}
+                                                className={`w-full flex items-center gap-4 px-5 py-3.5 text-left text-[15px] font-medium transition-colors ${dm ? 'text-stone-100 active:bg-stone-800' : 'text-gray-800 active:bg-gray-100'}`}
+                                            >
+                                                <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${a.bg} ${a.accent}`}>
+                                                    {a.icon}
+                                                </span>
+                                                {a.label}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -1112,19 +1188,19 @@ function GeneratedImageBlock({ initialUrl }: { initialUrl: string }) {
             </div>
             {isEditing && (
                 <div className="mt-3 space-y-2">
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                         <input
                             value={editPrompt}
                             onChange={e => setEditPrompt(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleEdit(); }}
                             placeholder="Descreva o que editar na imagem..."
                             disabled={isEditLoading}
-                            className="flex-1 px-3 py-2 rounded-xl bg-stone-800/60 border border-stone-600/40 text-stone-200 text-sm placeholder:text-stone-500 focus:outline-none focus:border-violet-500/50 disabled:opacity-50"
+                            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-stone-800/60 border border-stone-600/40 text-stone-200 text-sm placeholder:text-stone-500 focus:outline-none focus:border-violet-500/50 disabled:opacity-50"
                         />
                         <button
                             onClick={handleEdit}
                             disabled={isEditLoading || !editPrompt.trim()}
-                            className="px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all disabled:opacity-40 whitespace-nowrap"
+                            className="px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all disabled:opacity-40 whitespace-nowrap sm:self-auto"
                         >
                             {isEditLoading ? 'Editando...' : 'Aplicar'}
                         </button>

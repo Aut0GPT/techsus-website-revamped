@@ -12,6 +12,8 @@ const config: Config = {
       animation: {
         'bounce-slow': 'bounce-slow 2s ease-in-out infinite',
         'float-slow': 'float-slow 6s ease-in-out infinite',
+        'slide-up': 'slide-up 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
+        'fade-in': 'fade-in 0.2s ease-out',
       },
       keyframes: {
         'bounce-slow': {
@@ -21,6 +23,14 @@ const config: Config = {
         'float-slow': {
           '0%, 100%': { transform: 'translateY(0) rotate(-1deg)' },
           '50%': { transform: 'translateY(-10px) rotate(1deg)' },
+        },
+        'slide-up': {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
         },
       },
     },
