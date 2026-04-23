@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/supabase/server';
 
 export const maxDuration = 120;
 
-const OPENAI_IMAGE_MODEL = 'gpt-image-1.5';
+const OPENAI_IMAGE_MODEL = 'gpt-image-2';
 
 export async function POST(req: NextRequest) {
     const { response: authErr } = await requireUser();
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         const mimeType = imageResponse.headers.get('content-type') || 'image/png';
         const ext = mimeType.includes('png') ? 'png' : 'jpg';
 
-        console.log(`  🎨 Editing image with gpt-image-1.5: "${editPrompt.slice(0, 80)}"`);
+        console.log(`  🎨 Editing image with gpt-image-2: "${editPrompt.slice(0, 80)}"`);
 
         const fd = new FormData();
         fd.append('model', OPENAI_IMAGE_MODEL);

@@ -272,25 +272,26 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                     if (rawUrl.startsWith('data:')) {
                         content.push({
                             type: 'image',
-                            image: Buffer.from(rawUrl.split(',')[1], 'base64'),
-                            mimeType: mediaType,
+                            image: new Uint8Array(Buffer.from(rawUrl.split(',')[1], 'base64')),
+                            // Note: no mimeType field — not in ModelMessage image part schema
                         });
                     } else {
                         content.push({ type: 'image', image: new URL(rawUrl) });
                     }
                 } else {
                     // Non-image files (PDF, DOCX, TXT …) → Responses API inline file part
+                    // CRITICAL: field is `mediaType`, NOT `mimeType` (AI SDK v6 schema)
                     if (rawUrl.startsWith('data:')) {
                         content.push({
                             type: 'file',
-                            data: Buffer.from(rawUrl.split(',')[1], 'base64'),
-                            mimeType: mediaType || 'application/octet-stream',
+                            data: new Uint8Array(Buffer.from(rawUrl.split(',')[1], 'base64')),
+                            mediaType: mediaType || 'application/octet-stream',
                         });
                     } else {
                         content.push({
                             type: 'file',
                             data: new URL(rawUrl),
-                            mimeType: mediaType || 'application/octet-stream',
+                            mediaType: mediaType || 'application/octet-stream',
                         });
                     }
                 }
@@ -454,7 +455,7 @@ function logFinish(usage: any, steps: number, ms: number) {
 }
 
 // ─── OpenAI image helpers ────────────────────────────────────────────────────
-const OPENAI_IMAGE_MODEL = 'gpt-image-1.5';
+const OPENAI_IMAGE_MODEL = 'gpt-image-2';
 
 function mapAspectRatioToSize(aspectRatio: string): string {
     switch (aspectRatio) {
@@ -785,7 +786,7 @@ export async function POST(req: Request) {
                 }),
 
                 generateImage: tool({
-                    description: 'Gera uma imagem a partir de uma descrição textual usando OpenAI gpt-image-1.5. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual. Para PowerPoints, chame este tool uma vez por slide, passando o imageUrl do slide anterior em referenceImageUrl para manter consistência visual.',
+                    description: 'Gera uma imagem a partir de uma descrição textual usando OpenAI gpt-image-2. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual. Para PowerPoints, chame este tool uma vez por slide, passando o imageUrl do slide anterior em referenceImageUrl para manter consistência visual.',
                     inputSchema: z.object({
                         prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja muito específico sobre cores, layout, tipografia, estilo visual, composição e elementos.'),
                         aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para imagens quadradas, 9:16 para vertical.'),

@@ -2,7 +2,7 @@ import { requireUser } from '@/lib/supabase/server';
 
 export const maxDuration = 120;
 
-const OPENAI_IMAGE_MODEL = 'gpt-image-1.5';
+const OPENAI_IMAGE_MODEL = 'gpt-image-2';
 
 function mapAspectRatioToSize(aspectRatio: string): string {
     switch (aspectRatio) {
