@@ -81,14 +81,24 @@ function createRagMiddleware() {
                 const controller = new AbortController();
                 const timer = setTimeout(() => controller.abort(), 3000);
                 try {
-                    const { data: chunks } = await hybridSearch(trimmed, 2);
+                    const { data: chunks } = await hybridSearch(trimmed, 7);
                     clearTimeout(timer);
                     if (!chunks || chunks.length === 0) {
                         console.log(`  🧠 RAG middleware: no results (${Date.now() - t0}ms)`);
                         return params;
                     }
 
-                    const highConfidence = chunks.filter((c: any) => (c.similarity ?? 0) >= 0.6);
+                    // Keep the top 5 unconditionally; anything beyond that only passes
+                    // if it clears the RRF score floor. RRF scores live in roughly
+                    // [0, 0.04] so 0.015 is "decent match", 0.6 is the cosine floor the
+                    // vector-only fallback uses.
+                    const sorted = [...chunks].sort((a: any, b: any) => (b.similarity ?? 0) - (a.similarity ?? 0));
+                    const topFive = sorted.slice(0, 5);
+                    const extras = sorted.slice(5).filter((c: any) => {
+                        const s = c.similarity ?? 0;
+                        return s >= 0.6 || s >= 0.015; // passes either scoring regime
+                    });
+                    const highConfidence = [...topFive, ...extras];
                     if (highConfidence.length === 0) {
                         console.log(`  🧠 RAG middleware: no high-confidence results (${Date.now() - t0}ms)`);
                         return params;
@@ -226,7 +236,16 @@ Você tem acesso a uma ferramenta web_search nativa do modelo. Use-a quando o us
 - Quando o usuário perguntar sobre documentos ou informações da empresa, use o tool searchDocuments
 - Quando o usuário quiser VER uma imagem que existe (foto, diagrama, render, logo, esquema, infográfico) → CHAME searchImages
 - Quando o usuário pedir para CRIAR uma imagem nova (gerar, desenhar, fazer slide/PowerPoint) → CHAME generateImage
-- Sempre responda de forma útil e completa`;
+- Sempre responda de forma útil e completa
+
+## Política de Retrieval (MUITO IMPORTANTE)
+A precisão da resposta é prioridade absoluta. Custo de tokens NÃO é preocupação — busque o contexto necessário.
+
+- **Pergunta factual específica** (ex: "qual é o número da patente americana?", "qual a espessura do painel?") → \`searchDocuments({ query, matchCount: 5-7 })\`.
+- **Pergunta ampla, resumo ou panorama** (ex: "me dá um overview do sistema", "me fala tudo sobre a certificação", "como funciona o processo?") → \`searchDocuments({ query, matchCount: 12-15 })\`.
+- **Pergunta com múltiplos aspectos** (ex: "quais os benefícios técnicos E econômicos?") → faça 2 buscas separadas com queries distintas, OU uma busca com matchCount: 15.
+- **Se a primeira busca retornar \`weakResults: true\` ou o conteúdo não responder claramente** → REFORMULE a query (use sinônimos, termos técnicos diferentes, seja mais específico ou mais genérico) e chame searchDocuments de novo. Você pode chamar múltiplas vezes — é melhor buscar 3 vezes e acertar do que responder com contexto fraco.
+- **NUNCA invente, parafraseie livremente ou "complete" informações sobre a TECHSUS que não vieram de um tool call.** Se depois de 2-3 buscas você ainda não tem contexto suficiente, diga ao usuário que não encontrou informação específica sobre isso na base e ofereça reformular a pergunta.`;
 
 const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
     const coreMessages: any[] = [];
@@ -679,27 +698,46 @@ export async function POST(req: Request) {
                 web_search: openai.tools.webSearch({ searchContextSize: 'medium' }) as any,
 
                 searchDocuments: tool({
-                    description: 'Busca documentos relevantes na base de conhecimento da TECHSUS usando busca híbrida (semântica + palavras-chave). Use quando o usuário perguntar sobre documentos, processos, especificações técnicas, patentes ou qualquer informação que possa estar nos documentos da empresa.',
+                    description: 'Busca documentos relevantes na base de conhecimento da TECHSUS usando busca híbrida (semântica + palavras-chave). Use quando o usuário perguntar sobre documentos, processos, especificações técnicas, patentes ou qualquer informação que possa estar nos documentos da empresa. Use matchCount alto (12-15) para perguntas amplas/resumos; use o padrão (7) para perguntas específicas e factuais. Se a primeira busca retornar pouco contexto útil, reformule a query e chame novamente — nunca tente responder "do seu próprio conhecimento" sobre a TECHSUS.',
                     inputSchema: z.object({
                         query: z.string().optional().describe('Consulta em português para buscar nos documentos TECHSUS. Seja específico e use termos técnicos quando relevante.'),
+                        matchCount: z.number().int().min(5).max(15).optional().describe('Quantidade de trechos a recuperar (5-15). Padrão 7. Use 12-15 para perguntas amplas ("me dá um panorama", "resume o projeto"). Use 5-7 para perguntas factuais específicas.'),
                     }),
-                    execute: async ({ query }) => {
+                    execute: async ({ query, matchCount }) => {
                         try {
                             if (!query || query.trim() === '') {
                                 return { results: [] as any[], message: 'A busca requer um termo (query). Tente novamente sendo específico no termo de busca.' };
                             }
-                            const { data, error } = await hybridSearch(query, 5);
+                            const requested = Math.max(5, Math.min(15, matchCount ?? 7));
+                            const { data, error } = await hybridSearch(query, requested);
 
                             if (error || !data || data.length === 0) {
-                                return { results: [] as any[], message: 'Nenhum documento relevante encontrado.' };
+                                return { results: [] as any[], message: 'Nenhum documento relevante encontrado. Tente reformular a busca com termos diferentes.' };
                             }
 
+                            // Always return at least 5, up to `requested`. Anything past 5 is
+                            // only kept if it clears the similarity floor — trims noise on
+                            // narrow questions while letting broad questions saturate.
+                            const sorted = [...data].sort((a: any, b: any) => (b.similarity ?? 0) - (a.similarity ?? 0));
+                            const topFive = sorted.slice(0, 5);
+                            const extras = sorted.slice(5).filter((c: any) => {
+                                const s = c.similarity ?? 0;
+                                return s >= 0.6 || s >= 0.015; // cosine OR RRF scoring regime
+                            });
+                            const kept = [...topFive, ...extras];
+
+                            const bestScore = kept[0]?.similarity ?? 0;
+                            const weakResults = bestScore < 0.4 && bestScore < 0.02;
+
                             return {
-                                results: data.map((doc: { content: string; similarity: number }) => ({
+                                results: kept.map((doc: { content: string; similarity: number }) => ({
                                     content: doc.content,
                                     similarity: Number(doc.similarity?.toFixed(3)),
                                 })),
-                                message: `Encontrei ${data.length} trecho(s) relevante(s).`,
+                                message: weakResults
+                                    ? `Encontrei ${kept.length} trecho(s), mas nenhum tem alta similaridade. Considere reformular a query.`
+                                    : `Encontrei ${kept.length} trecho(s) relevante(s).`,
+                                weakResults,
                             };
                         } catch {
                             return { results: [] as any[], message: 'Erro ao buscar documentos.' };

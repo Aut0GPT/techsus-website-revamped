@@ -38,7 +38,7 @@ CREATE INDEX document_embeddings_embedding_hnsw_idx
 CREATE OR REPLACE FUNCTION match_documents(
   query_embedding halfvec(3072),
   match_threshold float DEFAULT 0.65,
-  match_count int DEFAULT 5
+  match_count int DEFAULT 7
 )
 RETURNS TABLE (id uuid, content text, similarity float)
 LANGUAGE sql STABLE AS $$
@@ -59,7 +59,7 @@ GRANT EXECUTE ON FUNCTION match_documents(halfvec, float, int) TO service_role;
 CREATE OR REPLACE FUNCTION hybrid_search(
   query_text       text,
   query_embedding  halfvec(3072),
-  match_count      int     DEFAULT 5,
+  match_count      int     DEFAULT 7,
   full_text_weight float   DEFAULT 1.0,
   semantic_weight  float   DEFAULT 1.0,
   rrf_k            int     DEFAULT 50
