@@ -243,6 +243,7 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                 content.push({ type: 'text', text: textValue });
             }
 
+            // Legacy v4 attachments
             if (message.experimental_attachments) {
                 for (const attachment of message.experimental_attachments) {
                     if (attachment.url.startsWith('data:')) {
@@ -252,6 +253,45 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         });
                     } else if (attachment.url.startsWith('http')) {
                         content.push({ type: 'image', image: new URL(attachment.url) });
+                    }
+                }
+            }
+
+            // AI SDK v6 file parts — populated by sendMessage({ files })
+            // The SDK puts each file as { type: 'file', url: 'data:...', mediaType: '...' }
+            // inside message.parts. These are completely separate from experimental_attachments.
+            for (const part of (message.parts ?? [])) {
+                if ((part as any).type !== 'file') continue;
+                const fp = part as any;
+                const mediaType: string = fp.mediaType ?? fp.mimeType ?? '';
+                const rawUrl: string = fp.url ?? fp.data ?? '';
+                if (!rawUrl) continue;
+
+                if (mediaType.startsWith('image/')) {
+                    // Images → OpenAI vision content part
+                    if (rawUrl.startsWith('data:')) {
+                        content.push({
+                            type: 'image',
+                            image: Buffer.from(rawUrl.split(',')[1], 'base64'),
+                            mimeType: mediaType,
+                        });
+                    } else {
+                        content.push({ type: 'image', image: new URL(rawUrl) });
+                    }
+                } else {
+                    // Non-image files (PDF, DOCX, TXT …) → Responses API inline file part
+                    if (rawUrl.startsWith('data:')) {
+                        content.push({
+                            type: 'file',
+                            data: Buffer.from(rawUrl.split(',')[1], 'base64'),
+                            mimeType: mediaType || 'application/octet-stream',
+                        });
+                    } else {
+                        content.push({
+                            type: 'file',
+                            data: new URL(rawUrl),
+                            mimeType: mediaType || 'application/octet-stream',
+                        });
                     }
                 }
             }

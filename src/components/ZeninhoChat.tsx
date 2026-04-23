@@ -110,6 +110,7 @@ export default function ZeninhoChat() {
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const [loadingConversations, setLoadingConversations] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     // ── UI state ───────────────────────────────────────────────────────────
     const [input, setInput] = useState('');
@@ -350,9 +351,9 @@ export default function ZeninhoChat() {
         setShowSidebar(false);
     };
 
-    const deleteConversation = async (e: React.MouseEvent, convId: string) => {
-        e.stopPropagation();
+    const deleteConversation = async (convId: string) => {
         if (!userId) return;
+        setConfirmDeleteId(null);
         setDeletingId(convId);
         const supabase = createBrowserSupabaseClient();
         await supabase.from('conversations').delete().eq('id', convId).eq('user_id', userId);
@@ -579,7 +580,7 @@ export default function ZeninhoChat() {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={(e) => deleteConversation(e, conv.id)}
+                                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(conv.id); }}
                                     className={`absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all ${dm ? 'hover:bg-red-500/20 text-stone-500 hover:text-red-400' : 'hover:bg-red-50 text-gray-400 hover:text-red-400'}`}
                                 >
                                     {deletingId === conv.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
@@ -643,11 +644,14 @@ export default function ZeninhoChat() {
                             </div>
                             <label className={`flex flex-col items-center justify-center gap-3 px-4 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${uploading ? 'border-orange-500/50 bg-orange-500/5' : 'border-stone-600 hover:border-orange-500 hover:bg-orange-500/5'}`}>
                                 {uploading ? (<><Loader2 size={28} className="text-orange-400 animate-spin" /><span className="text-sm text-orange-300 font-medium">Estudando o documento...</span></>) : (<><Upload size={28} className="text-stone-400" /><span className="text-sm text-stone-400">Clique para escolher o arquivo</span></>)}
-                                <input type="file" accept=".pdf,.pptx,.docx,.xlsx,.txt,.md,.csv,.json" onChange={handleUpload} className="hidden" disabled={uploading} />
+                                <input type="file" accept=".pdf,.pptx,.docx,.xlsx,.txt,.md,.csv,.json,.png,.jpg,.jpeg,.webp,.gif" onChange={handleUpload} className="hidden" disabled={uploading} />
                             </label>
                             <div className="flex flex-wrap gap-1.5 justify-center">
                                 {['PDF', 'PPTX', 'DOCX', 'XLSX', 'TXT', 'MD', 'CSV', 'JSON'].map((fmt) => (
                                     <span key={fmt} className="text-[10px] px-2 py-0.5 rounded bg-stone-800 text-stone-400 font-mono border border-stone-700/50">.{fmt.toLowerCase()}</span>
+                                ))}
+                                {['PNG', 'JPG', 'WEBP', 'GIF'].map((fmt) => (
+                                    <span key={fmt} className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-mono border border-amber-500/20">.{fmt.toLowerCase()}</span>
                                 ))}
                             </div>
                             {uploadMessage && (
@@ -656,6 +660,45 @@ export default function ZeninhoChat() {
                                 </div>
                             )}
                             <p className="text-xs text-stone-500 text-center">📖 Todos com acesso ao Zeninho podem consultar os documentos</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete confirmation modal */}
+                {confirmDeleteId && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={() => setConfirmDeleteId(null)}>
+                        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+                        <div
+                            className="relative z-10 w-full max-w-sm bg-stone-900 border border-stone-700/60 rounded-2xl shadow-2xl shadow-black/60 p-6"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Icon */}
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 mx-auto mb-4">
+                                <Trash2 size={20} className="text-red-400" />
+                            </div>
+
+                            <h3 className="text-white font-semibold text-center mb-1">Excluir conversa?</h3>
+                            <p className="text-stone-400 text-sm text-center mb-6 leading-relaxed">
+                                {(() => {
+                                    const title = conversations.find(c => c.id === confirmDeleteId)?.title;
+                                    return title ? `"${title.slice(0, 50)}${title.length > 50 ? '…' : ''}"` : 'Esta conversa';
+                                })()} será removida permanentemente.
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="flex-1 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white text-sm font-medium transition-all border border-stone-700/50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => deleteConversation(confirmDeleteId)}
+                                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-all shadow-lg shadow-red-500/20"
+                                >
+                                    Excluir
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

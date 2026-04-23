@@ -29,7 +29,8 @@
       "WebFetch(domain:developers.openai.com)",
       "Bash(npm list *)",
       "Bash(npm uninstall *)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(git push *)"
     ],
     "deny": []
   }
