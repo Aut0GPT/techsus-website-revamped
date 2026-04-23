@@ -2,48 +2,45 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Mic, MicOff, Square, Download, Plus, Users } from 'lucide-react';
+import { ArrowLeft, Mic, MicOff, Square, Download } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Speaker = {
-    id: number;
-    label: string;
-    color: string;
-    borderColor: string;
-    bgColor: string;
-};
-
 type Segment = {
     id: string;
-    speaker: Speaker;
     interimText: string;
     finalText: string;
+    /** Absolute wall-clock time the segment was captured */
     timestamp: Date;
+    /** Elapsed recording time in ms when segment was captured */
+    elapsedMs: number;
     isFinal: boolean;
     whisperDone: boolean;
 };
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_SPEAKERS: Speaker[] = [
-    { id: 1, label: 'Pessoa 1', color: 'text-orange-400', borderColor: 'border-orange-500', bgColor: 'bg-orange-500/10' },
-    { id: 2, label: 'Pessoa 2', color: 'text-blue-400',   borderColor: 'border-blue-500',   bgColor: 'bg-blue-500/10'   },
-    { id: 3, label: 'Pessoa 3', color: 'text-green-400',  borderColor: 'border-green-500',  bgColor: 'bg-green-500/10'  },
-    { id: 4, label: 'Pessoa 4', color: 'text-violet-400', borderColor: 'border-violet-500', bgColor: 'bg-violet-500/10' },
-    { id: 5, label: 'Pessoa 5', color: 'text-pink-400',   borderColor: 'border-pink-500',   bgColor: 'bg-pink-500/10'   },
-];
-
 const WHISPER_INTERVAL_MS = 30_000;
-const SPEAKER_GAP_MS      = 1_500;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatElapsed(ms: number): string {
-    const s = Math.floor(ms / 1000);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
+    const s   = Math.floor(ms / 1000);
+    const h   = Math.floor(s / 3600);
+    const m   = Math.floor((s % 3600) / 60);
     const sec = s % 60;
-    if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    if (h > 0) return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+    return `${pad(m)}:${pad(sec)}`;
+}
+
+function pad(n: number) { return String(n).padStart(2, '0'); }
+
+function formatTimestamp(date: Date): string {
+    return date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    });
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -52,35 +49,27 @@ export default function TranscricaoReuniao() {
     const router = useRouter();
 
     // ── Recording state ──
-    const [isRecording, setIsRecording]   = useState(false);
-    const [isPaused, setIsPaused]         = useState(false);
-    const [elapsedMs, setElapsedMs]       = useState(0);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isPaused, setIsPaused]       = useState(false);
+    const [elapsedMs, setElapsedMs]     = useState(0);
 
     // ── Transcription state ──
-    const [segments, setSegments]         = useState<Segment[]>([]);
+    const [segments, setSegments]           = useState<Segment[]>([]);
     const [currentInterim, setCurrentInterim] = useState('');
-    const [activeSpeakerIdx, setActiveSpeakerIdx] = useState(0);
-
-    // ── Speaker management ──
-    const [speakers, setSpeakers]         = useState<Speaker[]>(DEFAULT_SPEAKERS.slice(0, 2));
-    const [editingId, setEditingId]       = useState<number | null>(null);
-    const [editLabel, setEditLabel]       = useState('');
-    const [manualSpeakerIdx, setManualSpeakerIdx] = useState<number | null>(null); // override
 
     // ── Refs ──
-    const recognitionRef     = useRef<any>(null);
-    const mediaRecorderRef   = useRef<MediaRecorder | null>(null);
-    const streamRef          = useRef<MediaStream | null>(null);
-    const audioChunksRef     = useRef<Blob[]>([]);
-    const mimeTypeRef        = useRef('audio/webm;codecs=opus');
-    const lastSegmentTimeRef = useRef<number>(0);
-    const speakerCursorRef   = useRef(0);
-    const chunkTimerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-    const elapsedTimerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-    const startTimeRef       = useRef<number>(0);
-    const pausedAtRef        = useRef<number>(0);
-    const scrollRef          = useRef<HTMLDivElement>(null);
-    const pendingSegmentIds  = useRef<string[]>([]); // segments waiting for Whisper correction
+    const recognitionRef   = useRef<any>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const streamRef        = useRef<MediaStream | null>(null);
+    const audioChunksRef   = useRef<Blob[]>([]);
+    const mimeTypeRef      = useRef('audio/webm;codecs=opus');
+    const chunkTimerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+    const elapsedTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+    const startTimeRef     = useRef<number>(0);
+    const pausedAtRef      = useRef<number>(0);
+    const pausedTotalRef   = useRef<number>(0); // cumulative paused duration
+    const scrollRef        = useRef<HTMLDivElement>(null);
+    const pendingSegIds    = useRef<string[]>([]);
 
     // ── Auto-scroll ──
     useEffect(() => {
@@ -89,43 +78,27 @@ export default function TranscricaoReuniao() {
         }
     }, [segments, currentInterim]);
 
-    // ── Speaker helpers ──
-    const currentSpeaker = useCallback((): Speaker => {
-        const idx = manualSpeakerIdx !== null ? manualSpeakerIdx : speakerCursorRef.current;
-        return speakers[idx % speakers.length];
-    }, [speakers, manualSpeakerIdx]);
+    // ── Elapsed getter (accounts for pauses) ──
+    const getElapsed = useCallback(() =>
+        Date.now() - startTimeRef.current - pausedTotalRef.current,
+    []);
 
     // ── Add segment ──
     const addFinalSegment = useCallback((text: string) => {
         if (!text.trim()) return;
-
-        const now = Date.now();
-        const gap = now - lastSegmentTimeRef.current;
-
-        // Gap-based speaker change (only when no manual override)
-        if (manualSpeakerIdx === null && lastSegmentTimeRef.current > 0 && gap > SPEAKER_GAP_MS) {
-            speakerCursorRef.current = (speakerCursorRef.current + 1) % speakers.length;
-        }
-        lastSegmentTimeRef.current = now;
-
-        const speaker = manualSpeakerIdx !== null
-            ? speakers[manualSpeakerIdx % speakers.length]
-            : speakers[speakerCursorRef.current % speakers.length];
-
         const id = `seg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        pendingSegmentIds.current.push(id);
-
+        pendingSegIds.current.push(id);
         setSegments(prev => [...prev, {
             id,
-            speaker,
             interimText: text,
             finalText: '',
             timestamp: new Date(),
+            elapsedMs: getElapsed(),
             isFinal: true,
             whisperDone: false,
         }]);
         setCurrentInterim('');
-    }, [speakers, manualSpeakerIdx]);
+    }, [getElapsed]);
 
     // ── Whisper flush ──
     const flushToWhisper = useCallback(async () => {
@@ -135,10 +108,10 @@ export default function TranscricaoReuniao() {
         audioChunksRef.current = [];
 
         const blob = new Blob(chunks, { type: mimeTypeRef.current });
-        if (blob.size < 1000) return; // skip tiny blobs
+        if (blob.size < 1000) return;
 
-        const segIds = [...pendingSegmentIds.current];
-        pendingSegmentIds.current = [];
+        const segIds = [...pendingSegIds.current];
+        pendingSegIds.current = [];
 
         try {
             const form = new FormData();
@@ -150,16 +123,12 @@ export default function TranscricaoReuniao() {
             const whisperText: string = data.text?.trim() ?? '';
             if (!whisperText) return;
 
-            // Replace interim text of pending segments with Whisper-corrected version
             setSegments(prev => {
                 const updated = [...prev];
-                // Merge whisper text across the pending segment ids
                 const indices = updated.map((s, i) => segIds.includes(s.id) ? i : -1).filter(i => i >= 0);
                 if (indices.length === 0) return prev;
 
-                // Distribute whisper text: put all in the last segment, clear others
-                // This is the simplest approach — Whisper gives us one text for the whole chunk
-                const lastIdx = indices[indices.length - 1];
+                // Put the full whisper text on the last segment, clear earlier ones in the batch
                 indices.forEach((i, pos) => {
                     updated[i] = {
                         ...updated[i],
@@ -167,14 +136,13 @@ export default function TranscricaoReuniao() {
                         whisperDone: true,
                     };
                 });
-                // If only one segment, just set it
                 if (indices.length === 1) {
-                    updated[lastIdx] = { ...updated[lastIdx], finalText: whisperText, whisperDone: true };
+                    updated[indices[0]] = { ...updated[indices[0]], finalText: whisperText, whisperDone: true };
                 }
                 return updated;
             });
         } catch {
-            // Silently ignore Whisper errors — interim text remains
+            // Silently ignore — interim text remains visible
         }
     }, []);
 
@@ -184,7 +152,6 @@ export default function TranscricaoReuniao() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
 
-            // Detect best MIME type
             const preferredMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
                 ? 'audio/webm;codecs=opus'
                 : MediaRecorder.isTypeSupported('audio/webm')
@@ -194,25 +161,21 @@ export default function TranscricaoReuniao() {
 
             const mr = new MediaRecorder(stream, { mimeType: preferredMime });
             mediaRecorderRef.current = mr;
-            audioChunksRef.current = [];
+            audioChunksRef.current   = [];
 
             mr.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) {
-                    audioChunksRef.current.push(e.data);
-                }
+                if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
             };
-            mr.start(1000); // collect data every 1s
+            mr.start(1000);
 
-            // Web Speech API
+            // Web Speech API — live captions
             const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-            if (!SR) {
-                console.warn('Web Speech API not available');
-            } else {
+            if (SR) {
                 const recognition = new SR();
                 recognitionRef.current = recognition;
-                recognition.continuous     = true;
-                recognition.interimResults = true;
-                recognition.lang           = 'pt-BR';
+                recognition.continuous      = true;
+                recognition.interimResults  = true;
+                recognition.lang            = 'pt-BR';
                 recognition.maxAlternatives = 1;
 
                 recognition.onresult = (event: any) => {
@@ -229,33 +192,35 @@ export default function TranscricaoReuniao() {
                 };
 
                 recognition.onerror = (e: any) => {
-                    if (e.error === 'no-speech') return; // normal
+                    if (e.error === 'no-speech') return;
                     console.warn('Speech recognition error:', e.error);
                 };
 
                 recognition.onend = () => {
-                    // Auto-restart unless we've stopped intentionally
                     if (mediaRecorderRef.current?.state === 'recording') {
                         try { recognition.start(); } catch {}
                     }
                 };
 
                 recognition.start();
+            } else {
+                console.warn('Web Speech API not available in this browser');
             }
 
             // Whisper flush timer
             chunkTimerRef.current = setInterval(flushToWhisper, WHISPER_INTERVAL_MS);
 
             // Elapsed timer
-            startTimeRef.current = Date.now();
+            startTimeRef.current   = Date.now();
+            pausedTotalRef.current = 0;
             elapsedTimerRef.current = setInterval(() => {
-                setElapsedMs(Date.now() - startTimeRef.current);
-            }, 1000);
+                setElapsedMs(Date.now() - startTimeRef.current - pausedTotalRef.current);
+            }, 500);
 
-            speakerCursorRef.current = 0;
-            lastSegmentTimeRef.current = 0;
             setIsRecording(true);
             setIsPaused(false);
+            setSegments([]);
+            setCurrentInterim('');
         } catch (err) {
             console.error('Failed to start recording:', err);
             alert('Não foi possível acessar o microfone. Verifique as permissões.');
@@ -267,46 +232,37 @@ export default function TranscricaoReuniao() {
         if (!isRecording) return;
 
         if (!isPaused) {
-            // Pause
             mediaRecorderRef.current?.pause();
             recognitionRef.current?.stop();
             if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
             pausedAtRef.current = Date.now();
             setIsPaused(true);
         } else {
-            // Resume
             mediaRecorderRef.current?.resume();
             try { recognitionRef.current?.start(); } catch {}
-            const pausedDuration = Date.now() - pausedAtRef.current;
-            startTimeRef.current += pausedDuration;
+            pausedTotalRef.current += Date.now() - pausedAtRef.current;
             elapsedTimerRef.current = setInterval(() => {
-                setElapsedMs(Date.now() - startTimeRef.current);
-            }, 1000);
+                setElapsedMs(Date.now() - startTimeRef.current - pausedTotalRef.current);
+            }, 500);
             setIsPaused(false);
         }
     }, [isRecording, isPaused]);
 
     // ── Stop recording ──
     const stopRecording = useCallback(async () => {
-        // Clear timers
         if (chunkTimerRef.current)  clearInterval(chunkTimerRef.current);
         if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
-        // Stop Web Speech
         try { recognitionRef.current?.stop(); } catch {}
         recognitionRef.current = null;
 
-        // Stop MediaRecorder and flush final chunk
         if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.onstop = async () => {
-                await flushToWhisper();
-            };
+            mediaRecorderRef.current.onstop = async () => { await flushToWhisper(); };
             if (mediaRecorderRef.current.state !== 'inactive') {
                 mediaRecorderRef.current.stop();
             }
         }
 
-        // Stop stream tracks
         streamRef.current?.getTracks().forEach(t => t.stop());
         streamRef.current = null;
 
@@ -315,43 +271,21 @@ export default function TranscricaoReuniao() {
         setCurrentInterim('');
     }, [flushToWhisper]);
 
-    // ── Add speaker ──
-    const addSpeaker = useCallback(() => {
-        if (speakers.length >= DEFAULT_SPEAKERS.length) return;
-        setSpeakers(prev => [...prev, DEFAULT_SPEAKERS[prev.length]]);
-    }, [speakers.length]);
-
-    // ── Rename speaker ──
-    const startEdit = (speaker: Speaker) => {
-        setEditingId(speaker.id);
-        setEditLabel(speaker.label);
-    };
-
-    const commitEdit = () => {
-        if (editingId === null) return;
-        setSpeakers(prev => prev.map(s => s.id === editingId ? { ...s, label: editLabel || s.label } : s));
-        setSegments(prev => prev.map(seg =>
-            seg.speaker.id === editingId
-                ? { ...seg, speaker: { ...seg.speaker, label: editLabel || seg.speaker.label } }
-                : seg
-        ));
-        setEditingId(null);
-    };
-
     // ── Export ──
     const exportTxt = useCallback(() => {
         const lines = segments
             .filter(s => s.finalText || s.interimText)
             .map(s => {
-                const time = s.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const text = s.finalText || s.interimText;
-                return `[${time}] ${s.speaker.label}: ${text}`;
+                const clock   = formatTimestamp(s.timestamp);
+                const elapsed = formatElapsed(s.elapsedMs);
+                const text    = s.finalText || s.interimText;
+                return `[${clock} | +${elapsed}] ${text}`;
             });
         const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `reuniao-${new Date().toISOString().slice(0,10)}.txt`;
+        a.download = `reuniao-${new Date().toISOString().slice(0, 10)}.txt`;
         a.click();
         URL.revokeObjectURL(url);
     }, [segments]);
@@ -359,7 +293,7 @@ export default function TranscricaoReuniao() {
     // ── Cleanup on unmount ──
     useEffect(() => {
         return () => {
-            if (chunkTimerRef.current)   clearInterval(chunkTimerRef.current);
+            if (chunkTimerRef.current)  clearInterval(chunkTimerRef.current);
             if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
             try { recognitionRef.current?.stop(); } catch {}
             mediaRecorderRef.current?.stop();
@@ -382,10 +316,11 @@ export default function TranscricaoReuniao() {
                 </button>
 
                 <div className="flex items-center gap-2">
-                    <Users size={16} className="text-orange-400" />
+                    <Mic size={16} className="text-orange-400" />
                     <span className="font-semibold text-sm">Transcrição de Reunião</span>
                 </div>
 
+                {/* Elapsed clock */}
                 <div className="flex items-center gap-2 text-sm tabular-nums font-mono text-stone-400">
                     {isRecording && (
                         <span className={`w-2 h-2 rounded-full ${isPaused ? 'bg-stone-500' : 'bg-red-500 animate-pulse'}`} />
@@ -395,101 +330,49 @@ export default function TranscricaoReuniao() {
             </header>
 
             {/* ── Controls ── */}
-            <div className="flex flex-col gap-3 px-4 py-3 border-b border-stone-800 shrink-0">
-                {/* Recording buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    {!isRecording ? (
+            <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b border-stone-800 shrink-0">
+                {!isRecording ? (
+                    <button
+                        onClick={startRecording}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-medium text-sm transition-colors"
+                    >
+                        <Mic size={15} />
+                        Iniciar Gravação
+                    </button>
+                ) : (
+                    <>
                         <button
-                            onClick={startRecording}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-medium text-sm transition-colors"
+                            onClick={togglePause}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-700 hover:bg-stone-600 text-white font-medium text-sm transition-colors"
                         >
-                            <Mic size={15} />
-                            Iniciar Gravação
+                            {isPaused ? <Mic size={15} /> : <MicOff size={15} />}
+                            {isPaused ? 'Retomar' : 'Pausar'}
                         </button>
-                    ) : (
-                        <>
-                            <button
-                                onClick={togglePause}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-700 hover:bg-stone-600 text-white font-medium text-sm transition-colors"
-                            >
-                                {isPaused ? <Mic size={15} /> : <MicOff size={15} />}
-                                {isPaused ? 'Retomar' : 'Pausar'}
-                            </button>
-                            <button
-                                onClick={stopRecording}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-300 font-medium text-sm transition-colors border border-red-800/50"
-                            >
-                                <Square size={13} fill="currentColor" />
-                                Parar
-                            </button>
-                        </>
-                    )}
+                        <button
+                            onClick={stopRecording}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-300 font-medium text-sm transition-colors border border-red-800/50"
+                        >
+                            <Square size={13} fill="currentColor" />
+                            Parar
+                        </button>
+                    </>
+                )}
 
-                    {segments.length > 0 && (
-                        <button
-                            onClick={exportTxt}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-sm transition-colors border border-stone-700 ml-auto"
-                        >
-                            <Download size={14} />
-                            Exportar .txt
-                        </button>
-                    )}
-                </div>
-
-                {/* Speaker chips */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-stone-500 shrink-0">Participantes:</span>
-                    {speakers.map((speaker, idx) => (
-                        <button
-                            key={speaker.id}
-                            onClick={() => setManualSpeakerIdx(manualSpeakerIdx === idx ? null : idx)}
-                            onDoubleClick={() => startEdit(speaker)}
-                            title="Clique para selecionar • Duplo clique para renomear"
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border ${
-                                manualSpeakerIdx === idx
-                                    ? `${speaker.color} ${speaker.borderColor} ${speaker.bgColor}`
-                                    : 'text-stone-400 border-stone-700 bg-stone-800/50 hover:border-stone-500'
-                            }`}
-                        >
-                            {editingId === speaker.id ? (
-                                <input
-                                    autoFocus
-                                    value={editLabel}
-                                    onChange={e => setEditLabel(e.target.value)}
-                                    onBlur={commitEdit}
-                                    onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingId(null); }}
-                                    className="bg-transparent outline-none w-20 text-xs"
-                                    onClick={e => e.stopPropagation()}
-                                />
-                            ) : (
-                                <>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${speaker.color.replace('text-','bg-')}`} />
-                                    {speaker.label}
-                                </>
-                            )}
-                        </button>
-                    ))}
-                    {speakers.length < DEFAULT_SPEAKERS.length && (
-                        <button
-                            onClick={addSpeaker}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone-500 hover:text-stone-300 border border-dashed border-stone-700 hover:border-stone-500 transition-colors"
-                        >
-                            <Plus size={11} />
-                            Adicionar
-                        </button>
-                    )}
-                    {manualSpeakerIdx !== null && (
-                        <span className="text-xs text-stone-500 ml-1 italic">
-                            Próxima fala: {speakers[manualSpeakerIdx % speakers.length]?.label}
-                        </span>
-                    )}
-                </div>
+                {segments.length > 0 && (
+                    <button
+                        onClick={exportTxt}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-sm transition-colors border border-stone-700 ml-auto"
+                    >
+                        <Download size={14} />
+                        Exportar .txt
+                    </button>
+                )}
             </div>
 
             {/* ── Transcript area ── */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
             >
                 {segments.length === 0 && !isRecording && (
                     <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-600">
@@ -502,40 +385,45 @@ export default function TranscricaoReuniao() {
                     const displayText = seg.finalText || seg.interimText;
                     if (!displayText) return null;
                     return (
-                        <div
-                            key={seg.id}
-                            className={`border-l-2 pl-3 py-0.5 ${seg.speaker.borderColor}`}
-                        >
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <span className={`text-xs font-semibold ${seg.speaker.color}`}>
-                                    {seg.speaker.label}
+                        <div key={seg.id} className="flex gap-3 py-1.5 group">
+                            {/* Timestamp column */}
+                            <div className="shrink-0 pt-0.5 text-right" style={{ minWidth: '7rem' }}>
+                                <span className="text-xs font-mono text-stone-500 group-hover:text-stone-400 transition-colors">
+                                    {formatTimestamp(seg.timestamp)}
                                 </span>
-                                <span className="text-xs text-stone-600">
-                                    {seg.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
+                                <div className="text-[10px] font-mono text-stone-700 group-hover:text-stone-600 transition-colors">
+                                    +{formatElapsed(seg.elapsedMs)}
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="shrink-0 w-px bg-stone-800 group-hover:bg-stone-700 transition-colors mt-1" />
+
+                            {/* Text */}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-stone-200 leading-relaxed">
+                                    {displayText}
+                                </p>
                                 {seg.whisperDone && (
                                     <span className="text-[10px] text-stone-600 italic">✓ corrigido</span>
                                 )}
                             </div>
-                            <p className="text-sm text-stone-200 leading-relaxed">
-                                {displayText}
-                            </p>
                         </div>
                     );
                 })}
 
-                {/* Interim (live) */}
+                {/* Live interim */}
                 {currentInterim && (
-                    <div className={`border-l-2 pl-3 py-0.5 ${currentSpeaker().borderColor} opacity-60`}>
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <span className={`text-xs font-semibold ${currentSpeaker().color}`}>
-                                {currentSpeaker().label}
-                            </span>
-                            <span className="text-xs text-stone-600 italic animate-pulse">ao vivo…</span>
+                    <div className="flex gap-3 py-1.5 opacity-50">
+                        <div className="shrink-0 pt-0.5 text-right" style={{ minWidth: '7rem' }}>
+                            <span className="text-xs font-mono text-stone-500 animate-pulse">ao vivo…</span>
                         </div>
-                        <p className="text-sm text-stone-400 italic leading-relaxed">
-                            {currentInterim}
-                        </p>
+                        <div className="shrink-0 w-px bg-stone-800 mt-1" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm text-stone-400 italic leading-relaxed">
+                                {currentInterim}
+                            </p>
+                        </div>
                     </div>
                 )}
 
