@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { embedBatch } from '@/lib/embeddings';
 import { requireUser } from '@/lib/supabase/server';
 import { ingestImages, type IngestInput, type ImageSource } from '@/lib/imageIngest';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 // eslint-disable-next-line
 const pdfParse = require('pdf-parse');
 
@@ -213,6 +214,9 @@ function json(body: unknown, status = 200) {
 export async function POST(req: Request) {
     const { user, response: authErr } = await requireUser();
     if (authErr) return authErr;
+
+    const limit = await checkRateLimit(user.id, 'upload', 20, 3600);
+    if (!limit.allowed) return rateLimitResponse(limit, 'uploads');
 
     try {
         const formData = await req.formData();

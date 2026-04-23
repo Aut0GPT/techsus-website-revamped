@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { embedQuery } from '@/lib/embeddings';
 import { requireUser } from '@/lib/supabase/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 180;
 
@@ -594,6 +595,9 @@ export async function POST(req: Request) {
     const { user, response: authErr } = await requireUser();
     if (authErr) return authErr;
 
+    const chatLimit = await checkRateLimit(user.id, 'chat', 40, 300);
+    if (!chatLimit.allowed) return rateLimitResponse(chatLimit, 'mensagens');
+
     try {
         const { messages }: { messages: any[] } = await req.json();
 
@@ -799,6 +803,14 @@ export async function POST(req: Request) {
                     execute: async ({ prompt, aspectRatio = '16:9', referenceImageUrl }) => {
                         if (!prompt) return { success: false, message: 'Erro: O modelo não forneceu um prompt para a imagem.' };
                         if (!process.env.OPENAI_API_KEY) return { success: false, message: 'Chave de API não configurada.' };
+
+                        const imgLimit = await checkRateLimit(user.id, 'image_generate', 15, 3600);
+                        if (!imgLimit.allowed) {
+                            return {
+                                success: false,
+                                message: `Limite de geração de imagens atingido (${imgLimit.used}/${imgLimit.limit} por hora). Tente novamente em ${imgLimit.retryAfterSeconds}s.`,
+                            };
+                        }
 
                         const size = mapAspectRatioToSize(aspectRatio);
                         const logoBase64 = getLogoBase64();

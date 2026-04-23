@@ -1,10 +1,14 @@
 import { requireUser } from '@/lib/supabase/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-    const { response: authErr } = await requireUser();
+    const { user, response: authErr } = await requireUser();
     if (authErr) return authErr;
+
+    const limit = await checkRateLimit(user.id, 'transcribe', 60, 3600);
+    if (!limit.allowed) return rateLimitResponse(limit, 'transcrições');
 
     try {
         const formData = await req.formData();

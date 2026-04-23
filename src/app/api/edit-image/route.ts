@@ -1,14 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { requireUser } from '@/lib/supabase/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 120;
 
 const OPENAI_IMAGE_MODEL = 'gpt-image-2';
 
 export async function POST(req: NextRequest) {
-    const { response: authErr } = await requireUser();
+    const { user, response: authErr } = await requireUser();
     if (authErr) return authErr;
+
+    const limit = await checkRateLimit(user.id, 'image_edit', 15, 3600);
+    if (!limit.allowed) return rateLimitResponse(limit, 'edição de imagens');
 
     try {
         const { imageUrl, editPrompt } = await req.json();

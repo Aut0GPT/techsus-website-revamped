@@ -1,4 +1,5 @@
 import { requireUser } from '@/lib/supabase/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 120;
 
@@ -19,8 +20,11 @@ function mapAspectRatioToSize(aspectRatio: string): string {
 }
 
 export async function POST(req: Request) {
-    const { response: authErr } = await requireUser();
+    const { user, response: authErr } = await requireUser();
     if (authErr) return authErr;
+
+    const limit = await checkRateLimit(user.id, 'image_generate', 15, 3600);
+    if (!limit.allowed) return rateLimitResponse(limit, 'geração de imagens');
 
     try {
         const { prompt, count = 1, aspectRatio = '1:1' } = await req.json();
