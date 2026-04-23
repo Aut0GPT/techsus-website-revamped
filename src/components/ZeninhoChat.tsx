@@ -117,9 +117,25 @@ export default function ZeninhoChat() {
     const [showUpload, setShowUpload] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [settingsTab, setSettingsTab] = useState<'geral' | 'aparencia' | 'som'>('geral');
-    const [darkMode, setDarkMode] = useState(true);
-    const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
-    const [soundEnabled, setSoundEnabled] = useState(true);
+    const [darkMode, setDarkMode] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return true;
+        const v = localStorage.getItem('zeninho_darkMode');
+        return v === null ? true : v === 'true';
+    });
+    const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>(() => {
+        if (typeof window === 'undefined') return 'medium';
+        return (localStorage.getItem('zeninho_fontSize') as 'small' | 'medium' | 'large') || 'medium';
+    });
+    const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return true;
+        const v = localStorage.getItem('zeninho_sound');
+        return v === null ? true : v === 'true';
+    });
+
+    // Persist settings
+    useEffect(() => { localStorage.setItem('zeninho_darkMode', String(darkMode)); }, [darkMode]);
+    useEffect(() => { localStorage.setItem('zeninho_fontSize', fontSize); }, [fontSize]);
+    useEffect(() => { localStorage.setItem('zeninho_sound', String(soundEnabled)); }, [soundEnabled]);
     const [uploading, setUploading] = useState(false);
     const [uploadMessage, setUploadMessage] = useState('');
     const [showSidebar, setShowSidebar] = useState(false);
@@ -1087,36 +1103,88 @@ export default function ZeninhoChat() {
 
             {/* ── SETTINGS MODAL ──────────────────────────────────────── */}
             {showSettings && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-6" onClick={() => setShowSettings(false)}>
-                    <div className="relative flex w-full max-w-3xl h-[520px] rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-[#1a1a1a]" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setShowSettings(false)} className="absolute top-4 left-4 z-10 w-8 h-8 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/50 hover:text-white transition-all">
-                            <X size={15} />
-                        </button>
+                <div className="fixed inset-0 z-[100] flex items-end md:items-center md:justify-center bg-black/60 backdrop-blur-md md:p-6" onClick={() => setShowSettings(false)}>
+                    {/*
+                      Mobile  → bottom sheet (slides up, rounded top corners)
+                      Desktop → centered panel with sidebar nav
+                    */}
+                    <div
+                        className="relative w-full bg-[#1a1a1a] border border-white/10 shadow-2xl overflow-hidden flex flex-col
+                                   rounded-t-2xl max-h-[90dvh]
+                                   md:flex-row md:rounded-2xl md:max-w-3xl md:h-[520px] md:max-h-none"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* ── Drag handle (mobile only) ── */}
+                        <div className="md:hidden flex justify-center pt-3 pb-1 shrink-0">
+                            <div className="w-10 h-1 rounded-full bg-white/20" />
+                        </div>
 
-                        {/* Left nav */}
-                        <nav className="w-52 shrink-0 border-r border-white/8 pt-14 pb-4 px-2 flex flex-col gap-0.5 bg-[#111111]">
+                        {/* ── Mobile top tabs ── */}
+                        <div className="md:hidden flex items-center gap-1 px-4 pb-3 pt-1 border-b border-white/[0.07] shrink-0">
                             {([
-                                { id: 'geral' as const, label: 'Geral', icon: <Settings size={16} /> },
-                                { id: 'aparencia' as const, label: 'Aparência', icon: <Moon size={16} /> },
-                                { id: 'som' as const, label: 'Som', icon: <Volume2 size={16} /> },
+                                { id: 'geral' as const,     label: 'Geral',     icon: <Settings size={14} /> },
+                                { id: 'aparencia' as const, label: 'Aparência', icon: <Moon size={14} /> },
+                                { id: 'som' as const,       label: 'Som',       icon: <Volume2 size={14} /> },
+                            ]).map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setSettingsTab(tab.id)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                                        settingsTab === tab.id
+                                            ? 'bg-white/10 text-white'
+                                            : 'text-white/40 hover:text-white/70'
+                                    }`}
+                                >
+                                    <span className={settingsTab === tab.id ? 'text-orange-400' : 'text-white/30'}>{tab.icon}</span>
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* ── Desktop left sidebar nav ── */}
+                        <nav className="hidden md:flex w-52 shrink-0 border-r border-white/8 pt-5 pb-4 px-2 flex-col gap-0.5 bg-[#111111]">
+                            <div className="px-3 pb-3 mb-1 border-b border-white/[0.06]">
+                                <span className="text-[11px] font-semibold text-white/25 uppercase tracking-widest">Menu</span>
+                            </div>
+                            {([
+                                { id: 'geral' as const,     label: 'Geral',     icon: <Settings size={15} /> },
+                                { id: 'aparencia' as const, label: 'Aparência', icon: <Moon size={15} /> },
+                                { id: 'som' as const,       label: 'Som',       icon: <Volume2 size={15} /> },
                             ]).map(item => (
-                                <button key={item.id} onClick={() => setSettingsTab(item.id)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-all ${settingsTab === item.id ? 'bg-white/10 text-white font-medium' : 'text-white/45 hover:text-white/80 hover:bg-white/5'}`}>
-                                    <span className={settingsTab === item.id ? 'text-white' : 'text-white/35'}>{item.icon}</span>
+                                <button
+                                    key={item.id}
+                                    onClick={() => setSettingsTab(item.id)}
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-all ${
+                                        settingsTab === item.id
+                                            ? 'bg-white/10 text-white font-medium'
+                                            : 'text-white/45 hover:text-white/80 hover:bg-white/5'
+                                    }`}
+                                >
+                                    <span className={settingsTab === item.id ? 'text-orange-400' : 'text-white/30'}>{item.icon}</span>
                                     {item.label}
                                 </button>
                             ))}
                         </nav>
 
-                        {/* Right panel */}
+                        {/* ── Content panel ── */}
                         <div className="flex-1 flex flex-col overflow-hidden">
-                            <div className="px-8 pt-7 pb-5 border-b border-white/8 shrink-0">
+                            {/* Desktop header */}
+                            <div className="hidden md:flex items-center justify-between px-8 pt-7 pb-5 border-b border-white/8 shrink-0">
                                 <h2 className="text-lg font-semibold text-white">
-                                    {settingsTab === 'geral' && 'Geral'}
+                                    {settingsTab === 'geral'     && 'Geral'}
                                     {settingsTab === 'aparencia' && 'Aparência'}
-                                    {settingsTab === 'som' && 'Som'}
+                                    {settingsTab === 'som'       && 'Som'}
                                 </h2>
+                                <button
+                                    onClick={() => setShowSettings(false)}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/50 hover:text-white transition-all"
+                                >
+                                    <X size={15} />
+                                </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto px-8 py-5 space-y-2">
+
+                            {/* Scrollable settings content */}
+                            <div className="flex-1 overflow-y-auto px-5 md:px-8 py-4 md:py-5 space-y-2">
 
                                 {settingsTab === 'geral' && (
                                     <>
@@ -1160,9 +1228,22 @@ export default function ZeninhoChat() {
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2">
-                                                {(['small', 'medium', 'large'] as const).map(s => (
-                                                    <button key={s} onClick={() => setFontSize(s)} className={`py-2.5 rounded-xl text-sm font-medium transition-all ${fontSize === s ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-500/40' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70'}`}>
-                                                        {s === 'small' ? 'Aa Pequeno' : s === 'medium' ? 'Aa Médio' : 'Aa Grande'}
+                                                {([
+                                                    { key: 'small',  label: 'Pequeno', sample: 'Aa' },
+                                                    { key: 'medium', label: 'Médio',   sample: 'Aa' },
+                                                    { key: 'large',  label: 'Grande',  sample: 'Aa' },
+                                                ] as const).map(({ key, label, sample }) => (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => setFontSize(key)}
+                                                        className={`flex flex-col items-center gap-1 py-3 rounded-xl font-medium transition-all ${
+                                                            fontSize === key
+                                                                ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/40'
+                                                                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70'
+                                                        }`}
+                                                    >
+                                                        <span className={key === 'small' ? 'text-sm' : key === 'large' ? 'text-xl' : 'text-base'}>{sample}</span>
+                                                        <span className="text-[10px]">{label}</span>
                                                     </button>
                                                 ))}
                                             </div>
