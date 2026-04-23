@@ -153,7 +153,7 @@ Você tem DOIS tools para imagens. Escolha corretamente:
 
 **generateImage** — Para CRIAR uma imagem NOVA (não existe ainda na base).
 ⚠️ REGRA: Quando o usuário pedir para criar, gerar, fazer, desenhar, esboçar um gráfico, chart, slide, PowerPoint, mockup ou ilustração original, você DEVE chamar generateImage. NUNCA descreva em texto uma imagem que deveria ser gerada. NUNCA finja que gerou.
-- O prompt do tool DEVE ser em inglês e muito detalhado: cores, layout, tipografia, estilo, composição.
+- O prompt do tool deve ser em português brasileiro e muito detalhado: cores, layout, tipografia, estilo visual, composição e elementos.
 - Para gráficos quadrados ou imagens avulsas, use aspectRatio "1:1".
 - Quando o tool retornar success:true, a imagem aparece automaticamente no chat — NÃO inclua a URL nem markdown \`![...]()\`. Apenas comente brevemente.
 - Se success:false, informe o erro ao usuário.
@@ -204,12 +204,12 @@ Com o plano aprovado, GERE OS SLIDES UM A UM. Nunca em paralelo.
 
 **Slide 1 (Capa):**
 - NÃO passe referenceImageUrl
-- Prompt em inglês, extremamente detalhado: tema, público, estilo corporativo TECHSUS, logotipo em destaque no centro ou topo, cores da marca (deep blue #003366, white, orange accent #FF6600), tipografia limpa, layout profissional
+- Prompt em português brasileiro, extremamente detalhado: tema, público, estilo corporativo TECHSUS, logotipo em destaque no centro ou topo, cores da marca (azul escuro #003366, branco, laranja #FF6600), tipografia limpa, layout profissional
 - Use aspectRatio "16:9"
 
 **Slides 2 em diante:**
 - SEMPRE passe o imageUrl retornado pelo slide anterior como \`referenceImageUrl\`
-- No prompt, inclua: "consistent visual style with the reference slide, same color palette, same layout grid, same typography, TECHSUS logo bottom-right corner, 16:9 professional PowerPoint slide"
+- No prompt, inclua: "estilo visual consistente com o slide de referência, mesma paleta de cores, mesmo grid de layout, mesma tipografia, logo TECHSUS no canto inferior direito, slide profissional 16:9"
 - Isso garante coesão visual entre todos os slides
 
 **Regras absolutas:**
@@ -473,7 +473,9 @@ function mapAspectRatioToSize(aspectRatio: string): string {
 
 async function callOpenAiImageGenerate(prompt: string, size: string): Promise<{ b64: string; mime: string } | { error: string }> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    // gpt-image-2 docs: complex prompts can take up to 2 minutes.
+    // 150s gives breathing room under Vercel's 180s max.
+    const timeoutId = setTimeout(() => controller.abort(), 150000);
     try {
         const res = await fetch('https://api.openai.com/v1/images/generations', {
             method: 'POST',
@@ -485,7 +487,9 @@ async function callOpenAiImageGenerate(prompt: string, size: string): Promise<{ 
                 model: OPENAI_IMAGE_MODEL,
                 prompt,
                 size,
-                quality: 'high',
+                // 'medium' = good quality + much faster than 'high'.
+                // Use 'high' only when quality is critical and latency is acceptable.
+                quality: 'medium',
             }),
             signal: controller.signal,
         });
@@ -538,7 +542,7 @@ async function callOpenAiImageEdit(
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    const timeoutId = setTimeout(() => controller.abort(), 150000);
     try {
         const res = await fetch('https://api.openai.com/v1/images/edits', {
             method: 'POST',
@@ -788,7 +792,7 @@ export async function POST(req: Request) {
                 generateImage: tool({
                     description: 'Gera uma imagem a partir de uma descrição textual usando OpenAI gpt-image-2. Use para criar gráficos, ilustrações, mockups, slides de apresentação, diagramas, charts, ou qualquer conteúdo visual. Para PowerPoints, chame este tool uma vez por slide, passando o imageUrl do slide anterior em referenceImageUrl para manter consistência visual.',
                     inputSchema: z.object({
-                        prompt: z.string().describe('Descrição detalhada em inglês da imagem a ser gerada. Seja muito específico sobre cores, layout, tipografia, estilo visual, composição e elementos.'),
+                        prompt: z.string().describe('Descrição detalhada em português brasileiro da imagem a ser gerada. Seja muito específico sobre cores, layout, tipografia, estilo visual, composição e elementos.'),
                         aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção da imagem. Use 16:9 para slides/PowerPoint, 1:1 para imagens quadradas, 9:16 para vertical.'),
                         referenceImageUrl: z.string().optional().describe('URL da imagem de referência gerada anteriormente. Use para slides 2+ de uma apresentação, para manter consistência visual com o slide anterior.'),
                     }),
