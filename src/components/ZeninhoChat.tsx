@@ -409,16 +409,37 @@ export default function ZeninhoChat() {
         if (filesToSend.length > 0) {
             setIsAttaching(true);
             try {
+                const supabase = createBrowserSupabaseClient();
                 fileParts = await Promise.all(filesToSend.map(async (file) => {
-                    const form = new FormData();
-                    form.append('file', file, file.name);
-                    const res = await fetch('/api/chat-attach', { method: 'POST', body: form });
+                    // Step 1: ask our server for a signed upload URL. This is a
+                    // tiny JSON request (no bytes), so it never hits Vercel's
+                    // 4.5 MB body cap.
+                    const res = await fetch('/api/chat-attach', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename: file.name,
+                            mediaType: file.type || 'application/octet-stream',
+                            size: file.size,
+                        }),
+                    });
                     if (!res.ok) {
-                        const err = await res.json().catch(() => ({ error: 'Falha ao anexar o arquivo.' }));
-                        throw new Error(err.error ?? 'Falha ao anexar o arquivo.');
+                        const err = await res.json().catch(() => ({ error: 'Falha ao criar URL de upload.' }));
+                        throw new Error(err.error ?? 'Falha ao criar URL de upload.');
                     }
-                    const data = await res.json();
-                    return { type: 'file' as const, url: data.url, mediaType: data.mediaType, filename: data.filename };
+                    const { token, storagePath, readUrl, mediaType, filename } = await res.json();
+
+                    // Step 2: client uploads file bytes DIRECTLY to Supabase
+                    // Storage. Bypasses Vercel completely, so the only size
+                    // limit is Supabase's (5 GB per object by default).
+                    const { error: upErr } = await supabase.storage
+                        .from('imagensrag')
+                        .uploadToSignedUrl(storagePath, token, file, {
+                            contentType: mediaType,
+                        });
+                    if (upErr) throw new Error(upErr.message ?? 'Falha ao enviar o arquivo para o storage.');
+
+                    return { type: 'file' as const, url: readUrl, mediaType, filename };
                 }));
             } catch (err: any) {
                 console.error('chat-attach failed:', err?.message ?? err);
@@ -1490,6 +1511,14 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
             loadingText: 'Gerando imagem com IA...',
             doneText: (r) => r?.success ? 'Imagem gerada com sucesso' : 'Falha ao gerar imagem',
             detail: (a) => a?.prompt ? `"${String(a.prompt).slice(0, 70)}…"` : null,
+        },
+        editImage: {
+            icon: <ImagePlus size={13} />,
+            color: 'amber',
+            label: 'Edição de Imagem',
+            loadingText: 'Editando imagem...',
+            doneText: (r) => r?.success ? 'Imagem editada com sucesso' : 'Falha ao editar imagem',
+            detail: (a) => a?.editPrompt ? `"${String(a.editPrompt).slice(0, 70)}…"` : null,
         },
         listDocuments: {
             icon: <FolderOpen size={13} />,

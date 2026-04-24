@@ -153,25 +153,35 @@ Você é um gordinho simpático, tipo um mulequinho gênio — extremamente inte
 ## Sobre a TECHSUS
 A TECHSUS é um grupo de empresas voltadas à gestão e implantação de um sistema inovador para a construção industrializada de painéis estruturais bioclimáticos de concreto. O sistema é patenteado no Brasil (INPI), Estados Unidos (USPTO) e China (SIPO). A tecnologia permite construir com 40% menos tempo, zero desperdício de materiais e qualidade industrial superior. A empresa está localizada em São Paulo, SP, Brasil.
 
-## Imagens — Mostrar existente vs. Gerar nova
+## Imagens — 3 tools, escolha correta é obrigatória
 
-Você tem DOIS tools para imagens. Escolha corretamente:
+Você tem TRÊS tools para imagens. Escolha errada = tarefa errada.
 
-**searchImages** — Para MOSTRAR imagens que JÁ existem na base (fotos da fábrica, obras, painéis, diagramas técnicos, esquemas de conexão, renders, logos, infográficos, certificados, patentes, etc.).
+**searchImages** — MOSTRAR imagens que JÁ existem na base TECHSUS.
 - Use quando o usuário disser "me mostra", "tem alguma foto de", "quero ver", "tem um diagrama de", "mostra o logo", "tem imagem de", etc.
-- Chame passando uma query descritiva em português (ex: "linha de produção de painéis", "diagrama laje painel", "render casa térrea").
-- Quando o tool retornar imagens, INCLUA-AS na sua resposta usando markdown \`![descrição curta](url)\`. Pode mostrar múltiplas. Escreva 1-2 linhas de contexto acima de cada imagem.
-- Se o tool retornar zero imagens, avise o usuário e ofereça gerar uma nova (com generateImage).
+- Chame passando uma query descritiva em português.
+- Quando o tool retornar imagens, INCLUA-AS na resposta usando markdown \`![descrição curta](url)\`. Pode mostrar múltiplas.
+- Se retornar zero imagens, avise o usuário e ofereça gerar uma nova (com generateImage).
 
-**generateImage** — Para CRIAR uma imagem NOVA (não existe ainda na base).
-⚠️ REGRA: Quando o usuário pedir para criar, gerar, fazer, desenhar, esboçar um gráfico, chart, slide, PowerPoint, mockup ou ilustração original, você DEVE chamar generateImage. NUNCA descreva em texto uma imagem que deveria ser gerada. NUNCA finja que gerou.
-- O prompt do tool deve ser em português brasileiro e muito detalhado: cores, layout, tipografia, estilo visual, composição e elementos.
+**generateImage** — CRIAR uma imagem NOVA do zero.
+⚠️ Quando o usuário pedir para criar, gerar, fazer, desenhar, esboçar um gráfico, chart, slide, PowerPoint, mockup ou ilustração original → chame generateImage. NUNCA descreva em texto uma imagem que deveria ser gerada. NUNCA finja que gerou.
+- Prompt detalhado em português: cores, layout, tipografia, estilo, composição.
 - Para gráficos quadrados ou imagens avulsas, use aspectRatio "1:1".
-- Quando o tool retornar success:true, a imagem aparece automaticamente no chat — NÃO inclua a URL nem markdown \`![...]()\`. Apenas comente brevemente.
-- Se success:false, informe o erro ao usuário.
-- CRÍTICO: Gere UMA imagem por vez, em etapas separadas. Nunca em paralelo.
+- Quando success:true, a imagem aparece automaticamente no chat — NÃO inclua a URL nem markdown \`![...]()\`. Apenas comente brevemente.
+- Uma imagem por vez, em etapas separadas. Nunca em paralelo.
 
-**Regra de ouro:** Se o usuário diz "me mostra X" ou "tem alguma foto/imagem/diagrama de X", tente searchImages ANTES. Só use generateImage se ele pediu explicitamente "crie", "gere", "desenhe", "faça uma imagem/slide/apresentação".
+**editImage** — MODIFICAR uma imagem que JÁ ESTÁ NO CHAT (enviada pelo usuário OU gerada anteriormente por você).
+⚠️ REGRA CRÍTICA: Se o usuário anexou uma imagem e pede para "editar", "mudar", "ajustar", "trocar", "adicionar", "remover", "transformar", "melhorar", "cortar", "colorir", "pintar", "deixar ... diferente", VOCÊ PODE E DEVE fazer isso chamando editImage. NUNCA responda "não consigo editar" — você CONSEGUE.
+- Quando o usuário anexar uma imagem, a URL dela aparece acima como "[Imagem anexada pelo usuário disponível em: https://...]". COPIE essa URL exatamente para o parâmetro imageUrl.
+- Para imagens que você gerou antes, use o imageUrl retornado pelo generateImage anterior.
+- editPrompt em português brasileiro, específico sobre a mudança desejada: "adicione um céu azul com nuvens", "remova a pessoa à direita", "troque a cor da camisa para vermelha", "deixe em preto e branco", etc.
+- Quando success:true, a imagem editada aparece automaticamente no chat — NÃO inclua markdown \`![...]()\`. Apenas confirme brevemente o que foi feito.
+
+**Regra de ouro (resumo):**
+- Usuário quer VER algo que já existe na base → \`searchImages\`
+- Usuário quer CRIAR algo novo do zero → \`generateImage\`
+- Usuário quer MUDAR uma imagem que já está no chat → \`editImage\`
+- NUNCA responda que "não pode editar imagens" quando o usuário anexou uma imagem. Você tem \`editImage\` exatamente para isso.
 
 ## Apresentações PowerPoint — Workflow Obrigatório
 
@@ -342,6 +352,13 @@ const customConvertToCoreMessages = async (uiMessages: any[]): Promise<any[]> =>
                         });
                     } else {
                         content.push({ type: 'image', image: new URL(rawUrl) });
+                        // Expose the URL as a text part so tool calls (editImage)
+                        // can reference it. The model sees the image via vision
+                        // AND has the URL string available for tool arguments.
+                        content.push({
+                            type: 'text',
+                            text: `[Imagem anexada pelo usuário disponível em: ${rawUrl}]`,
+                        });
                     }
                     continue;
                 }
@@ -823,7 +840,7 @@ export async function POST(req: Request) {
                     summary = `${output?.images?.length ?? 0} image(s)`;
                 } else if (name === 'listDocuments') {
                     summary = `${output?.documents?.length ?? 0} doc(s)`;
-                } else if (name === 'generateImage') {
+                } else if (name === 'generateImage' || name === 'editImage') {
                     summary = output?.success ? `✅ ${String(output.imageUrl ?? '').slice(0, 60)}…` : `❌ ${output?.message}`;
                 } else if (name === 'web_search') {
                     summary = `${output?.results?.length ?? 0} web result(s)`;
@@ -967,6 +984,44 @@ export async function POST(req: Request) {
                     execute: async ({ width, length }) => {
                         const area = width * length;
                         return { width, length, area, message: `A área calculada é de ${area.toFixed(2)} metros quadrados.` };
+                    },
+                }),
+
+                editImage: tool({
+                    description: 'Edita uma imagem JÁ EXISTENTE no chat (seja anexada pelo usuário ou gerada anteriormente pelo Zeninho) aplicando as mudanças descritas. Use quando o usuário pedir para MODIFICAR, EDITAR, ADICIONAR, REMOVER, TRANSFORMAR, TROCAR ou AJUSTAR algo em uma imagem visível no chat. NÃO use para criar imagens novas do zero — para isso use generateImage.',
+                    inputSchema: z.object({
+                        imageUrl: z.string().describe('URL da imagem a ser editada. Para imagens enviadas pelo usuário, copie a URL exata de "[Imagem anexada pelo usuário disponível em: ...]". Para imagens geradas anteriormente, use o imageUrl retornado por generateImage ou por uma chamada anterior de editImage.'),
+                        editPrompt: z.string().describe('Descrição detalhada em português brasileiro do que editar. Seja específico: cores, elementos a adicionar/remover, composição, estilo. Ex: "adicione um céu azul no fundo", "remova a pessoa à direita", "mude a camisa para vermelha".'),
+                        aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional().describe('Proporção de saída. Por padrão mantém "1:1".'),
+                    }),
+                    execute: async ({ imageUrl, editPrompt, aspectRatio = '1:1' }) => {
+                        if (!imageUrl || !editPrompt) {
+                            return { success: false, message: 'imageUrl e editPrompt são obrigatórios.' };
+                        }
+                        if (!process.env.OPENAI_API_KEY) return { success: false, message: 'Chave de API não configurada.' };
+
+                        const editLimit = await checkRateLimit(user.id, 'image_edit', 15, 3600);
+                        if (!editLimit.allowed) {
+                            return {
+                                success: false,
+                                message: `Limite de edição de imagens atingido (${editLimit.used}/${editLimit.limit} por hora). Tente novamente em ${editLimit.retryAfterSeconds}s.`,
+                            };
+                        }
+
+                        const size = mapAspectRatioToSize(aspectRatio);
+                        console.log(`  🎨 editImage: "${editPrompt.slice(0, 80)}" on ${imageUrl.slice(0, 60)}...`);
+
+                        // logoBase64 = null → no TECHSUS logo attached.
+                        // Edits to user-owned images should not be auto-branded.
+                        const result = await callOpenAiImageEdit(editPrompt, size, null, imageUrl);
+                        if ('error' in result) return { success: false, message: result.error };
+
+                        const { url, persisted } = await uploadGeneratedImageToStorage(result.b64, result.mime, 'zeninho_edit');
+                        return {
+                            success: true,
+                            imageUrl: url,
+                            message: persisted ? 'Imagem editada com sucesso!' : 'Imagem editada (não persistida).',
+                        };
                     },
                 }),
 

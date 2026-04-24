@@ -2,10 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import { requireUser } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 const BUCKET = 'imagensrag';
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB — mirrors /api/upload
+// Vercel serverless has a ~4.5 MB request body cap, so this route never sees
+// the file bytes — it just hands out a signed upload URL. The real per-file
+// ceiling is Supabase Storage's per-object limit (5 GB by default). We still
+// clamp here so the UI can surface an early error instead of a silent failure.
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -24,43 +28,51 @@ export async function POST(req: Request) {
     if (!limit.allowed) return rateLimitResponse(limit, 'anexos no chat');
 
     try {
-        const form = await req.formData();
-        const file = form.get('file') as File | null;
-        if (!file) {
-            return new Response(JSON.stringify({ error: 'Nenhum arquivo enviado.' }), { status: 400 });
+        const body = await req.json().catch(() => null) as
+            | { filename?: string; mediaType?: string; size?: number }
+            | null;
+        if (!body || !body.filename) {
+            return new Response(JSON.stringify({ error: 'filename é obrigatório.' }), { status: 400 });
         }
 
-        if (file.size > MAX_FILE_SIZE) {
+        const size = Number(body.size ?? 0);
+        if (size > MAX_FILE_SIZE) {
             return new Response(JSON.stringify({
-                error: `Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)} MB). Máximo: ${MAX_FILE_SIZE / 1024 / 1024} MB.`,
+                error: `Arquivo muito grande (${(size / 1024 / 1024).toFixed(1)} MB). Máximo: ${MAX_FILE_SIZE / 1024 / 1024} MB.`,
             }), { status: 413 });
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const contentType = file.type || 'application/octet-stream';
-        const storagePath = `chat/${user.id}/${Date.now()}_${sanitize(file.name || 'file')}`;
+        const mediaType = body.mediaType || 'application/octet-stream';
+        const storagePath = `chat/${user.id}/${Date.now()}_${sanitize(body.filename)}`;
 
-        const { error: upErr } = await supabase.storage
+        // 1) Signed upload URL — the client PUTs file bytes directly to this.
+        //    Supabase handles the upload; Vercel is bypassed entirely.
+        const { data: uploadData, error: uploadErr } = await supabase.storage
             .from(BUCKET)
-            .upload(storagePath, buffer, { contentType, upsert: false });
-        if (upErr) {
-            console.error('  ❌ chat-attach upload error:', upErr.message);
-            return new Response(JSON.stringify({ error: 'Falha ao salvar o arquivo.' }), { status: 500 });
+            .createSignedUploadUrl(storagePath);
+        if (uploadErr || !uploadData) {
+            console.error('  ❌ chat-attach createSignedUploadUrl error:', uploadErr?.message);
+            return new Response(JSON.stringify({ error: 'Falha ao criar URL de upload.' }), { status: 500 });
         }
 
-        const { data: signed, error: signErr } = await supabase.storage
+        // 2) Signed read URL — valid immediately; actual downloads only succeed
+        //    after the client finishes the PUT above. Long TTL so the file
+        //    remains accessible for the lifetime of the conversation.
+        const { data: readData, error: readErr } = await supabase.storage
             .from(BUCKET)
             .createSignedUrl(storagePath, 60 * 60 * 24 * 365);
-        if (signErr || !signed?.signedUrl) {
-            console.error('  ❌ chat-attach sign error:', signErr?.message);
-            return new Response(JSON.stringify({ error: 'Falha ao gerar URL assinada.' }), { status: 500 });
+        if (readErr || !readData?.signedUrl) {
+            console.error('  ❌ chat-attach createSignedUrl error:', readErr?.message);
+            return new Response(JSON.stringify({ error: 'Falha ao gerar URL de leitura.' }), { status: 500 });
         }
 
         return Response.json({
-            url: signed.signedUrl,
-            filename: file.name,
-            mediaType: contentType,
-            size: file.size,
+            uploadUrl: uploadData.signedUrl,
+            token: uploadData.token,
+            storagePath: uploadData.path,
+            readUrl: readData.signedUrl,
+            filename: body.filename,
+            mediaType,
         });
     } catch (err: any) {
         console.error('  ❌ chat-attach error:', err?.message ?? err);
