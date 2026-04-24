@@ -1501,6 +1501,7 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
         loadingText: string;
         doneText: (r: any) => string;
         detail: (a: any) => string | null;
+        etaSeconds?: number; // soft ETA for long-running tools (shown during loading)
     };
 
     const configs: Record<string, ToolConfig> = {
@@ -1549,6 +1550,7 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
             loadingText: 'Gerando imagem com IA...',
             doneText: (r) => r?.success ? 'Imagem gerada com sucesso' : 'Falha ao gerar imagem',
             detail: (a) => a?.prompt ? `"${String(a.prompt).slice(0, 70)}…"` : null,
+            etaSeconds: 60,
         },
         editImage: {
             icon: <ImagePlus size={13} />,
@@ -1557,6 +1559,7 @@ function ToolCallCard({ toolName, args, state, result, isStreaming }: {
             loadingText: 'Editando imagem...',
             doneText: (r) => r?.success ? 'Imagem editada com sucesso' : 'Falha ao editar imagem',
             detail: (a) => a?.editPrompt ? `"${String(a.editPrompt).slice(0, 70)}…"` : null,
+            etaSeconds: 60,
         },
         listDocuments: {
             icon: <FolderOpen size={13} />,
