@@ -2,7 +2,7 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useDeferredValue, memo } from 'react';
 import {
     Send, Upload, Loader2, Menu, Sparkles, ImagePlus, BarChart3, Presentation,
     Paperclip, Mic, MicOff, X, Volume2, Settings, Moon, Sun, Type,
@@ -22,6 +22,51 @@ declare global {
         webkitSpeechRecognition: any;
     }
 }
+
+// ─── Markdown rendering — hoisted to module scope ──────────────────────────────
+// Defining these once means ReactMarkdown sees stable object/string identities
+// across renders, which in turn lets its internal memoization short-circuit
+// when the text hasn't changed. Inline definitions would invalidate that on
+// every token during streaming → O(n²) re-parse cost.
+const MD_COMPONENTS = {
+    img: ({ src, alt }: any) => {
+        if (!src) return null;
+        return (
+            <div className="mt-3 mb-2">
+                <img src={src} alt={alt || 'Imagem'} className="rounded-xl max-w-full shadow-lg border border-stone-700/30" />
+                <DownloadImageButton url={src} />
+            </div>
+        );
+    },
+    a: ({ href, children }: any) => <a href={href} target="_blank" rel="noopener noreferrer" className="underline">{children}</a>,
+    code: ({ children, className }: any) => {
+        const isBlock = className?.includes('language-');
+        if (isBlock) return <code className={`${className} block rounded-lg p-3 text-xs overflow-x-auto`}>{children}</code>;
+        return <code className="px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>;
+    },
+    p: ({ children }: any) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
+};
+
+const MD_REMARK_PLUGINS = [remarkGfm];
+
+const PROSE_DARK = 'prose prose-sm max-w-none leading-relaxed prose-invert prose-p:text-stone-100 prose-strong:text-white prose-headings:text-white prose-li:text-stone-200 prose-a:text-orange-400 hover:prose-a:text-orange-300 prose-code:text-orange-300 prose-code:bg-stone-700/50 prose-pre:bg-stone-900 prose-blockquote:border-orange-500/50 prose-blockquote:text-stone-300';
+const PROSE_LIGHT = 'prose prose-sm max-w-none leading-relaxed prose-p:text-gray-800 prose-strong:text-gray-900 prose-headings:text-gray-900 prose-li:text-gray-700 prose-a:text-orange-600 prose-code:text-orange-600 prose-code:bg-gray-100 prose-pre:bg-gray-50';
+
+// React.memo + useDeferredValue on the streaming text gives us two wins:
+//   (a) completed-message bubbles never re-render on new tokens (same text →
+//       same memoized output).
+//   (b) the currently-streaming bubble renders markdown in a low-priority
+//       transition, so scroll/input stays responsive while the DOM catches up.
+const AssistantMarkdown = memo(function AssistantMarkdown({ text, darkMode, fontSizeClass }: { text: string; darkMode: boolean; fontSizeClass: string }) {
+    const deferred = useDeferredValue(text);
+    return (
+        <div className={`${darkMode ? PROSE_DARK : PROSE_LIGHT} ${fontSizeClass}`}>
+            <ReactMarkdown remarkPlugins={MD_REMARK_PLUGINS} components={MD_COMPONENTS as any}>
+                {deferred}
+            </ReactMarkdown>
+        </div>
+    );
+});
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -905,30 +950,7 @@ export default function ZeninhoChat() {
                                     {partsWithTools(message).map((part, index) => {
                                         // ── Text part ───────────────────────────────────────
                                         if (part.type === 'text') {
-                                            return (
-                                                <div key={index} className={`prose prose-sm max-w-none leading-relaxed ${dm ? 'prose-invert prose-p:text-stone-100 prose-strong:text-white prose-headings:text-white prose-li:text-stone-200 prose-a:text-orange-400 hover:prose-a:text-orange-300 prose-code:text-orange-300 prose-code:bg-stone-700/50 prose-pre:bg-stone-900 prose-blockquote:border-orange-500/50 prose-blockquote:text-stone-300' : 'prose-p:text-gray-800 prose-strong:text-gray-900 prose-headings:text-gray-900 prose-li:text-gray-700 prose-a:text-orange-600 prose-code:text-orange-600 prose-code:bg-gray-100 prose-pre:bg-gray-50'}`}>
-                                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-                                                        img: ({ src, alt }) => {
-                                                            if (!src) return null;
-                                                            return (
-                                                                <div className="mt-3 mb-2">
-                                                                    <img src={src} alt={alt || 'Imagem'} className="rounded-xl max-w-full shadow-lg border border-stone-700/30" />
-                                                                    <DownloadImageButton url={src} />
-                                                                </div>
-                                                            );
-                                                        },
-                                                        a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="underline">{children}</a>,
-                                                        code: ({ children, className }) => {
-                                                            const isBlock = className?.includes('language-');
-                                                            if (isBlock) return <code className={`${className} block rounded-lg p-3 text-xs overflow-x-auto`}>{children}</code>;
-                                                            return <code className="px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>;
-                                                        },
-                                                        p: ({ children }) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
-                                                    }}>
-                                                        {part.text}
-                                                    </ReactMarkdown>
-                                                </div>
-                                            );
+                                            return <AssistantMarkdown key={index} text={part.text} darkMode={dm} fontSizeClass={fontSizeClass} />;
                                         }
 
                                         // ── File part ───────────────────────────────────────
