@@ -144,6 +144,7 @@ export default function ZeninhoChat() {
     const [chatFiles, setChatFiles] = useState<FileList | undefined>(undefined);
     const [filePreviews, setFilePreviews] = useState<{ name: string; url: string; type: string }[]>([]);
     const [isListening, setIsListening] = useState(false);
+    const [isAttaching, setIsAttaching] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -386,18 +387,58 @@ export default function ZeninhoChat() {
 
     // ── Messaging ─────────────────────────────────────────────────────────
 
-    const handleSend = () => {
-        if ((!input.trim() && !chatFiles) || isLoading) return;
+    const handleSend = async () => {
+        if ((!input.trim() && !chatFiles) || isLoading || isAttaching) return;
         setAutoScroll(true);
-        sendMessage({
-            text: input || (chatFiles ? 'Analise este arquivo.' : ''),
-            files: chatFiles,
-        });
+
+        const textToSend = input || (chatFiles ? 'Analise este arquivo.' : '');
+        const filesToSend = chatFiles ? Array.from(chatFiles) : [];
+
+        // Optimistically clear the composer before upload/network — the message
+        // previews show in the preview strip until sendMessage fires, but the
+        // textarea and file input feel instant.
         setInput('');
+        if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+        // Upload files to Supabase Storage BEFORE sending. Passing FileList to
+        // useChat's sendMessage forces a synchronous base64 encode on the main
+        // thread (can freeze the tab for large PDFs) and stores a huge data URL
+        // in React + Supabase conversation state. By uploading first and passing
+        // URLs, the message stays tiny and the main thread stays responsive.
+        let fileParts: Array<{ type: 'file'; url: string; mediaType: string; filename: string }> = [];
+        if (filesToSend.length > 0) {
+            setIsAttaching(true);
+            try {
+                fileParts = await Promise.all(filesToSend.map(async (file) => {
+                    const form = new FormData();
+                    form.append('file', file, file.name);
+                    const res = await fetch('/api/chat-attach', { method: 'POST', body: form });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({ error: 'Falha ao anexar o arquivo.' }));
+                        throw new Error(err.error ?? 'Falha ao anexar o arquivo.');
+                    }
+                    const data = await res.json();
+                    return { type: 'file' as const, url: data.url, mediaType: data.mediaType, filename: data.filename };
+                }));
+            } catch (err: any) {
+                console.error('chat-attach failed:', err?.message ?? err);
+                alert(err?.message ?? 'Erro ao anexar o arquivo. Tente novamente.');
+                setIsAttaching(false);
+                // Restore input so the user doesn't lose their typing on failure.
+                setInput(textToSend === 'Analise este arquivo.' ? '' : textToSend);
+                return;
+            }
+            setIsAttaching(false);
+        }
+
+        sendMessage({
+            text: textToSend,
+            ...(fileParts.length > 0 ? { files: fileParts } : {}),
+        });
+
         setChatFiles(undefined);
         setFilePreviews([]);
         if (chatFileInputRef.current) chatFileInputRef.current.value = '';
-        if (textareaRef.current) textareaRef.current.style.height = 'auto';
     };
 
     const handleChatFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -995,7 +1036,7 @@ export default function ZeninhoChat() {
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                                     disabled={isLoading}
-                                    placeholder={chatFiles ? 'Descreva o que quer saber...' : 'Peça algo ao Zeninho...'}
+                                    placeholder={isAttaching ? 'Enviando arquivo...' : chatFiles ? 'Descreva o que quer saber...' : 'Peça algo ao Zeninho...'}
                                     rows={1}
                                     className={`block w-full resize-none overflow-hidden bg-transparent text-[15px] leading-6 outline-none px-5 pt-3.5 pb-1 ${dm ? 'text-white placeholder-stone-500' : 'text-gray-900 placeholder-gray-400'}`}
                                 />
@@ -1051,11 +1092,12 @@ export default function ZeninhoChat() {
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={(!input.trim() && !chatFiles) || isLoading}
-                                            className={`w-10 h-10 rounded-full text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/20 disabled:shadow-none ${(!input.trim() && !chatFiles) || isLoading ? dm ? 'bg-stone-700/60 text-stone-500' : 'bg-gray-200 text-gray-400' : 'bg-orange-600 hover:bg-orange-500'}`}
+                                            disabled={(!input.trim() && !chatFiles) || isLoading || isAttaching}
+                                            className={`w-10 h-10 rounded-full text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/20 disabled:shadow-none ${(!input.trim() && !chatFiles) || isLoading || isAttaching ? dm ? 'bg-stone-700/60 text-stone-500' : 'bg-gray-200 text-gray-400' : 'bg-orange-600 hover:bg-orange-500'}`}
                                             aria-label="Enviar"
+                                            title={isAttaching ? 'Enviando arquivo...' : undefined}
                                         >
-                                            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={16} />}
+                                            {isLoading || isAttaching ? <Loader2 size={18} className="animate-spin" /> : <Send size={16} />}
                                         </button>
                                     </div>
                                 </div>
