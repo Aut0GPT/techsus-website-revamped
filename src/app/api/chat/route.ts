@@ -8,7 +8,7 @@ import { embedQuery } from '@/lib/embeddings';
 import { requireUser } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
-export const maxDuration = 180;
+export const maxDuration = 800;
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -540,7 +540,9 @@ async function callOpenAiImageEdit(
     fd.append('model', OPENAI_IMAGE_MODEL);
     fd.append('prompt', prompt);
     fd.append('size', size);
-    fd.append('quality', 'high');
+    // 'medium' matches the cover (callOpenAiImageGenerate) for consistency and keeps
+    // each slide under ~70s so a 5-slide deck fits inside the 800s route budget.
+    fd.append('quality', 'medium');
 
     if (logoBase64) {
         const logoBuffer = Buffer.from(logoBase64, 'base64');
