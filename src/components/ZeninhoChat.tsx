@@ -985,8 +985,12 @@ export default function ZeninhoChat() {
                                             const toolArgs = p.input ?? p.args ?? p.toolInvocation?.input ?? p.toolInvocation?.args ?? inv.input ?? inv.args ?? {};
                                             const toolResult = p.output ?? p.result ?? p.toolInvocation?.output ?? p.toolInvocation?.result ?? inv.output ?? inv.result ?? null;
 
-                                            // Show generated image inline from tool result
-                                            if (toolName === 'generateImage' && (toolState === 'result' || toolState === 'output-available') && toolResult?.imageUrl) {
+                                            // Show generated/edited image inline from tool result
+                                            if (
+                                                (toolName === 'generateImage' || toolName === 'editImage') &&
+                                                (toolState === 'result' || toolState === 'output-available') &&
+                                                toolResult?.imageUrl
+                                            ) {
                                                 return <GeneratedImageBlock key={index} initialUrl={toolResult.imageUrl} />;
                                             }
 
