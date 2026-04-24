@@ -374,17 +374,28 @@ const customConvertToCoreMessages = async (uiMessages: any[]): Promise<any[]> =>
                 const filename: string = fp.filename ?? fp.name ?? 'file';
 
                 if (isTextishMime(mediaType)) {
-                    if (rawUrl.startsWith('data:')) {
-                        try {
-                            const bytes = Buffer.from(rawUrl.split(',')[1], 'base64');
+                    try {
+                        let bytes: Buffer | null = null;
+                        if (rawUrl.startsWith('data:')) {
+                            bytes = Buffer.from(rawUrl.split(',')[1], 'base64');
+                        } else if (rawUrl.startsWith('http')) {
+                            const fetchRes = await fetch(rawUrl);
+                            if (fetchRes.ok) {
+                                bytes = Buffer.from(await fetchRes.arrayBuffer());
+                            } else {
+                                console.warn(`  ⚠  Textish fetch ${fetchRes.status} for ${filename}`);
+                            }
+                        }
+                        if (bytes) {
                             const text = bytes.toString('utf-8');
                             const header = `[Arquivo anexado: ${filename} (${mediaType})]`;
                             content.push({ type: 'text', text: `${header}\n\n${text}` });
-                        } catch (err: any) {
-                            console.warn(`  ⚠  Failed to decode textish file ${filename}:`, err?.message ?? err);
+                        } else {
+                            content.push({ type: 'text', text: `[Arquivo "${filename}" (${mediaType}) não pôde ser lido.]` });
                         }
-                    } else {
-                        content.push({ type: 'text', text: `[Arquivo anexado via URL: ${rawUrl}]` });
+                    } catch (err: any) {
+                        console.warn(`  ⚠  Failed to inline textish file ${filename}:`, err?.message ?? err);
+                        content.push({ type: 'text', text: `[Erro ao ler arquivo "${filename}": ${err?.message ?? 'desconhecido'}]` });
                     }
                     continue;
                 }
