@@ -430,10 +430,17 @@ const customConvertToCoreMessages = async (uiMessages: any[]): Promise<any[]> =>
 
                     const fileId = await ensureOpenAIFile(bytes, filename, mediaType || 'application/octet-stream');
                     if (fileId) {
+                        // AI SDK's OpenAI provider only accepts 'application/pdf'
+                        // or 'image/*' in the mediaType field for file parts — it
+                        // throws AI_UnsupportedFunctionalityError for any other
+                        // mime. When `data` is a file_id, OpenAI ignores the
+                        // mediaType entirely and uses the real type from the
+                        // Files API record, so we spoof 'application/pdf' here
+                        // purely to satisfy the SDK's type gate.
                         content.push({
                             type: 'file',
                             data: fileId,
-                            mediaType: mediaType || 'application/octet-stream',
+                            mediaType: 'application/pdf',
                             filename,
                         });
                     } else {
