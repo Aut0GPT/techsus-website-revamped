@@ -29,9 +29,35 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json().catch(() => null) as
-            | { filename?: string; mediaType?: string; size?: number }
+            | { phase?: 'request' | 'sign'; filename?: string; mediaType?: string; size?: number; storagePath?: string }
             | null;
-        if (!body || !body.filename) {
+        if (!body) {
+            return new Response(JSON.stringify({ error: 'Corpo JSON inválido.' }), { status: 400 });
+        }
+
+        // ─── Phase 2: sign a read URL for an already-uploaded object ─────
+        if (body.phase === 'sign') {
+            if (!body.storagePath) {
+                return new Response(JSON.stringify({ error: 'storagePath é obrigatório.' }), { status: 400 });
+            }
+            // Lock down: only paths under the caller's own prefix can be signed.
+            const expectedPrefix = `chat/${user.id}/`;
+            if (!body.storagePath.startsWith(expectedPrefix)) {
+                return new Response(JSON.stringify({ error: 'Caminho inválido.' }), { status: 403 });
+            }
+
+            const { data: readData, error: readErr } = await supabase.storage
+                .from(BUCKET)
+                .createSignedUrl(body.storagePath, 60 * 60 * 24 * 365);
+            if (readErr || !readData?.signedUrl) {
+                console.error('  ❌ chat-attach sign error:', readErr?.message);
+                return new Response(JSON.stringify({ error: readErr?.message ?? 'Falha ao gerar URL de leitura.' }), { status: 500 });
+            }
+            return Response.json({ readUrl: readData.signedUrl });
+        }
+
+        // ─── Phase 1: request upload URL ────────────────────────────────
+        if (!body.filename) {
             return new Response(JSON.stringify({ error: 'filename é obrigatório.' }), { status: 400 });
         }
 
@@ -45,8 +71,8 @@ export async function POST(req: Request) {
         const mediaType = body.mediaType || 'application/octet-stream';
         const storagePath = `chat/${user.id}/${Date.now()}_${sanitize(body.filename)}`;
 
-        // 1) Signed upload URL — the client PUTs file bytes directly to this.
-        //    Supabase handles the upload; Vercel is bypassed entirely.
+        // Signed upload URL — client PUTs file bytes directly to this,
+        // bypassing Vercel entirely.
         const { data: uploadData, error: uploadErr } = await supabase.storage
             .from(BUCKET)
             .createSignedUploadUrl(storagePath);
@@ -55,22 +81,10 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Falha ao criar URL de upload.' }), { status: 500 });
         }
 
-        // 2) Signed read URL — valid immediately; actual downloads only succeed
-        //    after the client finishes the PUT above. Long TTL so the file
-        //    remains accessible for the lifetime of the conversation.
-        const { data: readData, error: readErr } = await supabase.storage
-            .from(BUCKET)
-            .createSignedUrl(storagePath, 60 * 60 * 24 * 365);
-        if (readErr || !readData?.signedUrl) {
-            console.error('  ❌ chat-attach createSignedUrl error:', readErr?.message);
-            return new Response(JSON.stringify({ error: 'Falha ao gerar URL de leitura.' }), { status: 500 });
-        }
-
         return Response.json({
             uploadUrl: uploadData.signedUrl,
             token: uploadData.token,
             storagePath: uploadData.path,
-            readUrl: readData.signedUrl,
             filename: body.filename,
             mediaType,
         });

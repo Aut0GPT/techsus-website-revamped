@@ -411,9 +411,8 @@ export default function ZeninhoChat() {
             try {
                 const supabase = createBrowserSupabaseClient();
                 fileParts = await Promise.all(filesToSend.map(async (file) => {
-                    // Step 1: ask our server for a signed upload URL. This is a
-                    // tiny JSON request (no bytes), so it never hits Vercel's
-                    // 4.5 MB body cap.
+                    // Phase 1: request a signed upload URL. Tiny JSON request,
+                    // never touches Vercel's 4.5 MB body cap.
                     const res = await fetch('/api/chat-attach', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -427,17 +426,30 @@ export default function ZeninhoChat() {
                         const err = await res.json().catch(() => ({ error: 'Falha ao criar URL de upload.' }));
                         throw new Error(err.error ?? 'Falha ao criar URL de upload.');
                     }
-                    const { token, storagePath, readUrl, mediaType, filename } = await res.json();
+                    const { token, storagePath, mediaType, filename } = await res.json();
 
-                    // Step 2: client uploads file bytes DIRECTLY to Supabase
-                    // Storage. Bypasses Vercel completely, so the only size
-                    // limit is Supabase's (5 GB per object by default).
+                    // Phase 2: upload file bytes DIRECTLY to Supabase Storage.
+                    // Bypasses Vercel; size cap is Supabase's (5 GB default).
                     const { error: upErr } = await supabase.storage
                         .from('imagensrag')
                         .uploadToSignedUrl(storagePath, token, file, {
                             contentType: mediaType,
                         });
                     if (upErr) throw new Error(upErr.message ?? 'Falha ao enviar o arquivo para o storage.');
+
+                    // Phase 3: now that the object exists, ask the server to
+                    // sign a read URL. createSignedUrl requires the object to
+                    // exist, which is why this has to be a separate call.
+                    const signRes = await fetch('/api/chat-attach', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phase: 'sign', storagePath }),
+                    });
+                    if (!signRes.ok) {
+                        const err = await signRes.json().catch(() => ({ error: 'Falha ao gerar URL de leitura.' }));
+                        throw new Error(err.error ?? 'Falha ao gerar URL de leitura.');
+                    }
+                    const { readUrl } = await signRes.json();
 
                     return { type: 'file' as const, url: readUrl, mediaType, filename };
                 }));
