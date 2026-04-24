@@ -174,7 +174,7 @@ Você tem DOIS tools para imagens. Escolha corretamente:
 
 ## Apresentações PowerPoint — Workflow Obrigatório
 
-⚠️ QUANDO O USUÁRIO PEDIR UMA APRESENTAÇÃO, POWERPOINT OU CONJUNTO DE SLIDES, siga EXATAMENTE este workflow em 3 fases. NUNCA pule uma fase.
+⚠️ QUANDO O USUÁRIO PEDIR UMA APRESENTAÇÃO, POWERPOINT OU CONJUNTO DE SLIDES, siga EXATAMENTE este workflow. NUNCA pule uma fase. NUNCA gere slides baseados em "achismo" — cada slide precisa estar ancorado em conteúdo real dos documentos TECHSUS.
 
 ---
 
@@ -191,27 +191,53 @@ Aguarde a resposta do usuário antes de fazer qualquer coisa.
 
 ---
 
-### FASE 2 — Planejamento colaborativo (só depois da resposta da Fase 1)
+### FASE 1.5 — Retrieval prévio (OBRIGATÓRIA, ANTES de propor qualquer outline)
 
-**Se o usuário forneceu o conteúdo de cada slide:** confirme brevemente o plano em formato de lista numerada ("Entendido! Vou gerar assim: 1. Capa — [tema] ...") e pule direto para a Fase 3.
+Assim que o usuário responder a Fase 1, ANTES de propor qualquer plano, você DEVE buscar conteúdo real nos documentos TECHSUS para fundamentar o deck.
 
-**Se o usuário pediu para você sugerir:** PENSE PROFUNDAMENTE e proponha um plano detalhado slide a slide. Exemplo de formato:
+- Faça **3 a 5 chamadas de \`searchDocuments\` em paralelo**, uma por área temática provável do deck. Use \`matchCount: 12-15\` em cada.
+- Exemplo para um PPT sobre "fábricas para clientes":
+  - \`searchDocuments({ query: "localização fábricas TECHSUS cidades estados implantação", matchCount: 14 })\`
+  - \`searchDocuments({ query: "capacidade produtiva fábrica mesas painéis cronograma", matchCount: 14 })\`
+  - \`searchDocuments({ query: "diferenciais competitivos sistema industrializado velocidade qualidade", matchCount: 14 })\`
+  - \`searchDocuments({ query: "certificações patentes INPI USPTO SIPO TECHSUS", matchCount: 12 })\`
+  - \`searchDocuments({ query: "clientes mercado potencial construção civil Brasil", matchCount: 12 })\`
+- Se qualquer busca retornar \`weakResults: true\`, REFORMULE com sinônimos e tente de novo.
+- Esta fase é SILENCIOSA — não comente com o usuário, apenas colete o material.
+
+**Regra dura:** nunca pule para a Fase 2 sem ter feito ao menos 3 buscas bem-sucedidas. Um outline sem retrieval é um outline chutado — isso é proibido.
+
+---
+
+### FASE 2 — Planejamento colaborativo ancorado no material
+
+Agora, com o material real em mãos, proponha o outline. O plano DEVE referenciar dados específicos dos documentos: números reais, nomes de cidades, nomes de certificações, espessuras, cronogramas, etc. Formato:
 
 > **Plano da apresentação — [Tema] para [Público]**
-> 1. **Capa** — [título da apresentação, subtítulo, logotipo TECHSUS em destaque]
-> 2. **[Título do slide 2]** — [pontos principais: bullet 1, bullet 2, dado relevante]
-> 3. **[Título do slide 3]** — [pontos principais]
+> *Baseado em [N] trechos dos documentos TECHSUS.*
+>
+> 1. **Capa** — [título, subtítulo com o posicionamento real da empresa, logotipo TECHSUS]
+> 2. **[Título específico]** — [3-4 pontos com DADOS REAIS extraídos dos docs: "painéis de 140mm", "patente US nº X", "cidade Y", etc.]
+> 3. **[Título específico]** — [pontos com dados reais]
 > ... e assim por diante
 >
 > Posso ajustar qualquer slide antes de gerar. O que acha?
 
-Aguarde o usuário aprovar ou ajustar o plano. Só avance para a Fase 3 quando ele confirmar ("pode gerar", "tá bom", "vai assim", ou similar).
+Se o usuário tinha fornecido conteúdo específico na Fase 1, combine o conteúdo dele com o que veio do retrieval. Se ele disse "você escolhe tudo", você tem liberdade total — mas tudo ancorado no retrieval.
+
+Aguarde o usuário aprovar ou ajustar. Só avance quando ele confirmar ("pode gerar", "tá bom", "vai assim").
+
+**Se o usuário adicionar um tópico novo no ajuste** que não foi coberto pela Fase 1.5, faça uma busca adicional ANTES de prosseguir para a Fase 3.
 
 ---
 
 ### FASE 3 — Geração sequencial com consistência visual
 
 Com o plano aprovado, GERE OS SLIDES UM A UM. Nunca em paralelo.
+
+**Cada prompt de slide DEVE:**
+- Conter os dados reais do retrieval (números, nomes próprios, especificações), não descrições genéricas.
+- Pedir tipografia que permita exibir esses dados (headlines curtos, bullets numéricos, callouts).
 
 **Slide 1 (Capa):**
 - NÃO passe referenceImageUrl
@@ -227,7 +253,7 @@ Com o plano aprovado, GERE OS SLIDES UM A UM. Nunca em paralelo.
 - Gere UM slide por vez — aguarde o resultado (success:true + imageUrl) antes de chamar o próximo
 - Use aspectRatio "16:9" em TODOS os slides
 - O logotipo da TECHSUS DEVE aparecer em todos os slides
-- Após gerar todos os slides, escreva um resumo conciso: título de cada slide, mensagem principal, e uma dica de como usar a apresentação
+- Após gerar todos os slides, escreva um resumo conciso: título de cada slide, mensagem principal ancorada nos dados, e uma dica de como usar a apresentação
 
 ## Pesquisa na Web
 Você tem acesso a uma ferramenta web_search nativa do modelo. Use-a quando o usuário pedir informações atuais, notícias, preços de mercado, dados sobre empresas, ou qualquer coisa que não esteja nos documentos internos. Não precisa avisar antes de pesquisar.
@@ -346,6 +372,13 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                 const textValue = textFromParts || message.content || '';
                 if (textValue) assistantContent.push({ type: 'text', text: textValue });
 
+                // Track every tool-call we emit so we can guarantee a matching
+                // tool-result below. Without this guarantee, OpenAI rejects the
+                // thread with AI_MissingToolResultsError — which happens when a
+                // previous request was killed mid-tool-call (timeout, user abort,
+                // Vercel function kill, etc.) and the partial state got persisted.
+                const emittedCalls: Array<{ id: string; name: string; hasResult: boolean; output: any }> = [];
+
                 for (const p of v6ToolParts) {
                     const rawType: string = p.type ?? '';
                     const toolName = p.toolName || (rawType.startsWith('tool-') ? rawType.slice(5) : 'unknown');
@@ -354,6 +387,12 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         toolCallId: p.toolCallId,
                         toolName,
                         input: p.input ?? p.args ?? {},
+                    });
+                    emittedCalls.push({
+                        id: p.toolCallId,
+                        name: toolName,
+                        hasResult: v6DoneStates.has(p.state),
+                        output: p.output ?? p.result ?? null,
                     });
                 }
 
@@ -365,6 +404,12 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         toolName: inv.toolName ?? 'unknown',
                         input: inv.input ?? inv.args ?? {},
                     });
+                    emittedCalls.push({
+                        id: inv.toolCallId,
+                        name: inv.toolName ?? 'unknown',
+                        hasResult: inv.result != null || inv.output != null || v6DoneStates.has(inv.state),
+                        output: inv.output ?? inv.result ?? null,
+                    });
                 }
 
                 for (const t of legacyInvocations) {
@@ -374,48 +419,49 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         toolName: t.toolName ?? 'unknown',
                         input: t.input ?? t.args ?? {},
                     });
+                    emittedCalls.push({
+                        id: t.toolCallId,
+                        name: t.toolName ?? 'unknown',
+                        hasResult: 'result' in t || 'output' in t,
+                        output: t.output ?? t.result ?? null,
+                    });
                 }
 
                 if (assistantContent.length > 0) {
                     coreMessages.push({ role: 'assistant', content: assistantContent });
                 }
 
+                // Emit one tool-result per tool-call — synthesizing a placeholder
+                // for any call whose result never got persisted.
                 const toolResults: any[] = [];
-
-                for (const p of v6ToolParts) {
-                    if (v6DoneStates.has(p.state)) {
-                        const rawType: string = p.type ?? '';
-                        const toolName = p.toolName || (rawType.startsWith('tool-') ? rawType.slice(5) : 'unknown');
+                let synthesized = 0;
+                for (const call of emittedCalls) {
+                    if (call.hasResult) {
                         toolResults.push({
                             type: 'tool-result',
-                            toolCallId: p.toolCallId,
-                            toolName,
-                            output: { type: 'json', value: p.output ?? p.result ?? null },
+                            toolCallId: call.id,
+                            toolName: call.name,
+                            output: { type: 'json', value: call.output },
+                        });
+                    } else {
+                        synthesized++;
+                        toolResults.push({
+                            type: 'tool-result',
+                            toolCallId: call.id,
+                            toolName: call.name,
+                            output: {
+                                type: 'json',
+                                value: {
+                                    success: false,
+                                    interrupted: true,
+                                    message: 'A execução anterior desta ferramenta foi interrompida (timeout ou desconexão). Se o usuário pedir para continuar, chame a ferramenta novamente.',
+                                },
+                            },
                         });
                     }
                 }
-
-                for (const p of legacyToolParts) {
-                    const inv = p.toolInvocation ?? p;
-                    if (inv.result != null || inv.output != null || v6DoneStates.has(inv.state)) {
-                        toolResults.push({
-                            type: 'tool-result',
-                            toolCallId: inv.toolCallId,
-                            toolName: inv.toolName ?? 'unknown',
-                            output: { type: 'json', value: inv.output ?? inv.result ?? null },
-                        });
-                    }
-                }
-
-                for (const t of legacyInvocations) {
-                    if ('result' in t || 'output' in t) {
-                        toolResults.push({
-                            type: 'tool-result',
-                            toolCallId: t.toolCallId,
-                            toolName: t.toolName ?? 'unknown',
-                            output: { type: 'json', value: t.output ?? t.result ?? null },
-                        });
-                    }
+                if (synthesized > 0) {
+                    console.warn(`  ⚠  Synthesized ${synthesized} placeholder tool-result(s) for orphan tool-call(s)`);
                 }
 
                 if (toolResults.length > 0) {
@@ -646,7 +692,7 @@ export async function POST(req: Request) {
             system: ZENINHO_SYSTEM_PROMPT,
             messages: coreMessages,
 
-            stopWhen: stepCountIs(10),
+            stopWhen: stepCountIs(20),
 
             providerOptions: {
                 openai: {
