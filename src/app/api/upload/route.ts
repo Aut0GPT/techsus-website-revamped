@@ -13,6 +13,11 @@ const IMAGE_BUCKET = 'imagensrag';
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif)$/i;
 const IMAGE_MIME_RE = /^image\/(png|jpeg|jpg|webp|gif)$/i;
 
+// Hard cap on upload size. Vercel limits body to 4.5 MB by default on Hobby and
+// ~50 MB on Pro; even beyond that, extracting and embedding a multi-hundred-MB
+// PDF is not realistic inside the function budget. 30 MB is a healthy ceiling.
+const MAX_FILE_SIZE = 30 * 1024 * 1024;
+
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -20,9 +25,34 @@ const supabase = createClient(
 
 function chunkText(text: string, maxChunkSize = 1000, overlap = 200): string[] {
     const chunks: string[] = [];
-    const sentences = text.split(/(?<=[.!?。])\s+/);
-    let currentChunk = '';
 
+    // Step 1: split on sentence boundaries. If a "sentence" is abnormally long
+    // (common with XLSX dumps, OCR'd PDFs, or PPTX slide text without periods),
+    // force-split it by character window (preferring whitespace) so no single
+    // unit can exceed ~2x maxChunkSize. Without this, one giant "sentence" will
+    // blow past OpenAI's 8191-token per-input embedding limit.
+    const HARD_CAP = maxChunkSize * 2;
+    const rawSentences = text.split(/(?<=[.!?。])\s+/);
+    const sentences: string[] = [];
+    for (const s of rawSentences) {
+        if (s.length <= HARD_CAP) {
+            sentences.push(s);
+            continue;
+        }
+        let pos = 0;
+        while (pos < s.length) {
+            let end = Math.min(pos + maxChunkSize, s.length);
+            if (end < s.length) {
+                const lastSpace = s.lastIndexOf(' ', end);
+                if (lastSpace > pos + Math.floor(maxChunkSize / 2)) end = lastSpace;
+            }
+            sentences.push(s.slice(pos, end));
+            pos = end;
+            while (pos < s.length && s[pos] === ' ') pos++;
+        }
+    }
+
+    let currentChunk = '';
     for (const sentence of sentences) {
         if ((currentChunk + ' ' + sentence).length > maxChunkSize && currentChunk.length > 0) {
             chunks.push(currentChunk.trim());
@@ -227,6 +257,13 @@ export async function POST(req: Request) {
 
         const fileName = file.name.toLowerCase();
         const buffer = Buffer.from(await file.arrayBuffer());
+
+        if (buffer.length > MAX_FILE_SIZE) {
+            return json({
+                error: `Arquivo muito grande (${(buffer.length / 1024 / 1024).toFixed(1)} MB). Tamanho máximo: ${MAX_FILE_SIZE / 1024 / 1024} MB.`,
+            }, 413);
+        }
+
         const isImage = IMAGE_MIME_RE.test(file.type) || IMAGE_EXT_RE.test(fileName);
 
         // ───── Direct image upload ────────────────────────────────────────
