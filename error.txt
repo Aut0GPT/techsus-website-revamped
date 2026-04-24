@@ -1,19 +1,59 @@
-2026-04-24 02:31:51.184 [error] ❌ OpenAI embeddings error: 400 {
-    "error": {
-        "message": "Requested 1633463 tokens, max 300000 tokens per request",
-        "type": "max_tokens_per_request",
-        "param": null,
-        "code": "max_tokens_per_request"
+2026-04-24 02:54:05.983 [info] ════════════════════════════════════════════════════════════════════════
+2026-04-24 02:54:05.983 [info] 🤖 ZENINHO  │  2026-04-24T02:54:05.968Z  │  gpt-5.4
+2026-04-24 02:54:05.983 [info] Thread: 3 message(s)
+2026-04-24 02:54:05.983 [info] ────────────────────────────────────────────────────────────────────────
+2026-04-24 02:54:05.983 [info] [ 1] USER      │ Analise este arquivo. [+1 image(s)]
+2026-04-24 02:54:05.983 [info] [ 2] ASSISTANT │ Claro. Aqui vai uma análise objetiva da imagem:
 
-        This was when i tried to upload a 124 mb pdf. 
+### O que aparece
+- **Pessoa sentada em uma mesa de restauran…
+2026-04-24 02:54:05.983 [info] [ 3] USER      │ \
+2026-04-24 02:54:05.983 [info] ────────────────────────────────────────────────────────────────────────
+2026-04-24 02:54:06.008 [error] ❌ ZENINHO STREAM ERROR: tu [AI_UnsupportedFunctionalityError]: 'file part media type text/plain' functionality not supported.
+    at /var/task/.next/server/app/api/chat/route.js:57:16070
+    at Array.map (<anonymous>)
+    at c4 (/var/task/.next/server/app/api/chat/route.js:57:15313)
+    at mt.getArgs (/var/task/.next/server/app/api/chat/route.js:57:43664)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async mt.doStream (/var/task/.next/server/app/api/chat/route.js:57:54843)
+    at async fn (/var/task/.next/server/app/api/chat/route.js:84:14692)
+    at async /var/task/.next/server/app/api/chat/route.js:74:37150
+    at async hW (/var/task/.next/server/app/api/chat/route.js:74:38941)
+    at async O (/var/task/.next/server/app/api/chat/route.js:84:13570) {
+  cause: undefined,
+  functionality: 'file part media type text/plain',
+  [Symbol(vercel.ai.error)]: true,
+  [Symbol(vercel.ai.error.AI_UnsupportedFunctionalityError)]: true
+}
+2026-04-24 02:54:06.008 [info] ════════════════════════════════════════════════════════════════════════
 
 
+2026-04-24 02:55:22.716 [info] ════════════════════════════════════════════════════════════════════════
+2026-04-24 02:55:22.716 [info] 🤖 ZENINHO  │  2026-04-24T02:55:22.715Z  │  gpt-5.4
+2026-04-24 02:55:22.716 [info] Thread: 4 message(s)
+2026-04-24 02:55:22.716 [info] ────────────────────────────────────────────────────────────────────────
+2026-04-24 02:55:22.716 [info] [ 1] USER      │ Analise este arquivo. [+1 image(s)]
+2026-04-24 02:55:22.716 [info] [ 2] ASSISTANT │ Claro. Aqui vai uma análise objetiva da imagem:
 
-        Then I uploaded a smaller pdf and it worked just fine. 
-
-
-        but then i tried this file [{"idx":2,"id":"6227d906-6100-4493-b0c5-c6daaed3825e","title":"03 DRE FAB 48 MESAS REV JEA 16ABRIL2026 .xlsx","file_url":null,"uploaded_by":"jeadawt@gmail.com","created_at":"2026-04-24 02:31:50.261122+00"}] 
-        
-        and it said it embeeded like 0/36? i tried looking in my db and i saw no embeddings connected to it.
-
-        Then i tried a ppt and it just failed directly. 
+### O que aparece
+- **Pessoa sentada em uma mesa de restauran…
+2026-04-24 02:55:22.716 [info] [ 3] USER      │ \
+2026-04-24 02:55:22.716 [info] [ 4] USER      │ Analise este arquivo. [+1 image(s)]
+2026-04-24 02:55:22.717 [info] ────────────────────────────────────────────────────────────────────────
+2026-04-24 02:55:22.756 [error] ❌ ZENINHO STREAM ERROR: tu [AI_UnsupportedFunctionalityError]: 'file part media type text/plain' functionality not supported.
+    at /var/task/.next/server/app/api/chat/route.js:57:16070
+    at Array.map (<anonymous>)
+    at c4 (/var/task/.next/server/app/api/chat/route.js:57:15313)
+    at mt.getArgs (/var/task/.next/server/app/api/chat/route.js:57:43664)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async mt.doStream (/var/task/.next/server/app/api/chat/route.js:57:54843)
+    at async fn (/var/task/.next/server/app/api/chat/route.js:84:14692)
+    at async /var/task/.next/server/app/api/chat/route.js:74:37150
+    at async hW (/var/task/.next/server/app/api/chat/route.js:74:38941)
+    at async O (/var/task/.next/server/app/api/chat/route.js:84:13570) {
+  cause: undefined,
+  functionality: 'file part media type text/plain',
+  [Symbol(vercel.ai.error)]: true,
+  [Symbol(vercel.ai.error.AI_UnsupportedFunctionalityError)]: true
+}
+2026-04-24 02:55:22.756 [info] ════════════════════════════════════════════════════════════════════════

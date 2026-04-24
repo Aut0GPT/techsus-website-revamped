@@ -7,6 +7,7 @@ import path from 'path';
 import { embedQuery } from '@/lib/embeddings';
 import { requireUser } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
+import { ensureOpenAIFile } from '@/lib/openaiFiles';
 
 export const maxDuration = 800;
 
@@ -273,7 +274,26 @@ A precisão da resposta é prioridade absoluta. Custo de tokens NÃO é preocupa
 - **Se a primeira busca retornar \`weakResults: true\` ou o conteúdo não responder claramente** → REFORMULE a query (use sinônimos, termos técnicos diferentes, seja mais específico ou mais genérico) e chame searchDocuments de novo. Você pode chamar múltiplas vezes — é melhor buscar 3 vezes e acertar do que responder com contexto fraco.
 - **NUNCA invente, parafraseie livremente ou "complete" informações sobre a TECHSUS que não vieram de um tool call.** Se depois de 2-3 buscas você ainda não tem contexto suficiente, diga ao usuário que não encontrou informação específica sobre isso na base e ofereça reformular a pergunta.`;
 
-const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
+// Mime types we can send to OpenAI's Responses API as inline file bytes.
+// Everything else must be uploaded to the Files API first and referenced by id.
+const INLINE_FILE_MIMES = new Set<string>([
+    'application/pdf',
+]);
+
+// Mime types that are plain text — we can decode and inline as a text part
+// instead of a file, avoiding any file-uploading roundtrip.
+function isTextishMime(m: string): boolean {
+    if (!m) return false;
+    return (
+        m.startsWith('text/') ||
+        m === 'application/json' ||
+        m === 'application/xml' ||
+        m === 'application/x-yaml' ||
+        m === 'application/yaml'
+    );
+}
+
+const customConvertToCoreMessages = async (uiMessages: any[]): Promise<any[]> => {
     const coreMessages: any[] = [];
     for (const message of uiMessages) {
         if (message.role === 'user') {
@@ -319,27 +339,98 @@ const customConvertToCoreMessages = (uiMessages: any[]): any[] => {
                         content.push({
                             type: 'image',
                             image: new Uint8Array(Buffer.from(rawUrl.split(',')[1], 'base64')),
-                            // Note: no mimeType field — not in ModelMessage image part schema
                         });
                     } else {
                         content.push({ type: 'image', image: new URL(rawUrl) });
                     }
-                } else {
-                    // Non-image files (PDF, DOCX, TXT …) → Responses API inline file part
-                    // CRITICAL: field is `mediaType`, NOT `mimeType` (AI SDK v6 schema)
+                    continue;
+                }
+
+                // Non-image file. Three routing strategies:
+                //   (a) text-ish mime → decode and inline as a text part
+                //   (b) inline-capable mime (currently just PDF) → pass bytes as a file part
+                //   (c) everything else (DOCX, PPTX, XLSX, unknown) → upload to OpenAI's
+                //       Files API and pass the returned file_id as data. This is the only
+                //       way to get non-PDF binary docs into the Responses API via the AI
+                //       SDK's OpenAI provider; sending raw bytes throws
+                //       AI_UnsupportedFunctionalityError.
+                const filename: string = fp.filename ?? fp.name ?? 'file';
+
+                if (isTextishMime(mediaType)) {
+                    if (rawUrl.startsWith('data:')) {
+                        try {
+                            const bytes = Buffer.from(rawUrl.split(',')[1], 'base64');
+                            const text = bytes.toString('utf-8');
+                            const header = `[Arquivo anexado: ${filename} (${mediaType})]`;
+                            content.push({ type: 'text', text: `${header}\n\n${text}` });
+                        } catch (err: any) {
+                            console.warn(`  ⚠  Failed to decode textish file ${filename}:`, err?.message ?? err);
+                        }
+                    } else {
+                        content.push({ type: 'text', text: `[Arquivo anexado via URL: ${rawUrl}]` });
+                    }
+                    continue;
+                }
+
+                if (INLINE_FILE_MIMES.has(mediaType)) {
                     if (rawUrl.startsWith('data:')) {
                         content.push({
                             type: 'file',
                             data: new Uint8Array(Buffer.from(rawUrl.split(',')[1], 'base64')),
-                            mediaType: mediaType || 'application/octet-stream',
+                            mediaType,
+                            filename,
                         });
                     } else {
                         content.push({
                             type: 'file',
                             data: new URL(rawUrl),
-                            mediaType: mediaType || 'application/octet-stream',
+                            mediaType,
+                            filename,
                         });
                     }
+                    continue;
+                }
+
+                // Office docs and unknowns: upload to OpenAI Files API, pass file_id.
+                try {
+                    let bytes: Uint8Array | null = null;
+                    if (rawUrl.startsWith('data:')) {
+                        bytes = new Uint8Array(Buffer.from(rawUrl.split(',')[1], 'base64'));
+                    } else if (rawUrl.startsWith('http')) {
+                        const fetchRes = await fetch(rawUrl);
+                        if (fetchRes.ok) {
+                            bytes = new Uint8Array(await fetchRes.arrayBuffer());
+                        }
+                    }
+
+                    if (!bytes) {
+                        content.push({
+                            type: 'text',
+                            text: `[Arquivo "${filename}" (${mediaType}) não pôde ser lido.]`,
+                        });
+                        continue;
+                    }
+
+                    const fileId = await ensureOpenAIFile(bytes, filename, mediaType || 'application/octet-stream');
+                    if (fileId) {
+                        content.push({
+                            type: 'file',
+                            data: fileId,
+                            mediaType: mediaType || 'application/octet-stream',
+                            filename,
+                        });
+                    } else {
+                        content.push({
+                            type: 'text',
+                            text: `[Arquivo "${filename}" (${mediaType}) falhou ao carregar na API. Avise o usuário.]`,
+                        });
+                    }
+                } catch (err: any) {
+                    console.error(`  ❌ File routing error for ${filename}:`, err?.message ?? err);
+                    content.push({
+                        type: 'text',
+                        text: `[Erro ao processar arquivo "${filename}": ${err?.message ?? 'desconhecido'}]`,
+                    });
                 }
             }
 
@@ -676,7 +767,7 @@ export async function POST(req: Request) {
             middleware: createRagMiddleware(),
         });
 
-        const coreMessages = sanitizeMessages(customConvertToCoreMessages(messages));
+        const coreMessages = sanitizeMessages(await customConvertToCoreMessages(messages));
         logRequest(modelId, coreMessages);
 
         if (coreMessages.length === 0) {
